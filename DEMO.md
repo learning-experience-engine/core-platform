@@ -35,6 +35,7 @@ Open: http://localhost:5173
 ## Example URLs
 
 - Weather deep-dive: http://localhost:5173/?stack=weather,air_pressure,wind
+- Weather chain: http://localhost:5173/?stack=weather&chain=typhoon_safety&step=0&age=adult
 - Skin deep-dive: http://localhost:5173/?stack=skin,epidermis,dermis
 - Skin chain: http://localhost:5173/?stack=skin&chain=skin_intro&step=0&age=adult
 - Sun tan chain: http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult (晒黑与防晒主题)
