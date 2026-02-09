@@ -1,4 +1,4 @@
-# Project Name
+# Core-platform
 
 An open-source platform for building curiosity-driven, explorable learning experiences.
 
@@ -29,3 +29,12 @@ The architecture is intentionally incomplete and open for discussion.
 ```bash
 pnpm install
 pnpm dev
+```
+
+## Shareable Paths
+
+The web demo syncs the card stack to the URL query string. Share a path by copying the URL after navigating:
+
+- Example: `http://localhost:5173/?stack=plant_cell,protoplast,bacteria`
+
+When someone opens the link, the demo will restore the same stack.

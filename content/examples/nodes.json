@@ -1,0 +1,37 @@
+[
+  {
+    "id": "plant_cell",
+    "title": "植物细胞",
+    "body": "植物细胞具有细胞壁、叶绿体等结构。研究细胞结构时常会用到[原生质体]来观察膜系统。",
+    "mentions": {
+      "原生质体": "protoplast"
+    },
+    "relations": [
+      { "type": "related", "facet": "what", "targetId": "protoplast" },
+      { "type": "compare_with", "facet": "compare", "targetId": "bacteria" }
+    ]
+  },
+  {
+    "id": "protoplast",
+    "title": "原生质体",
+    "body": "原生质体是去除了细胞壁的细胞内容物集合，可用于研究细胞膜与信号过程。对比[细菌]可以帮助理解细胞壁差异。",
+    "mentions": {
+      "细菌": "bacteria"
+    },
+    "relations": [
+      { "type": "compare_with", "facet": "compare", "targetId": "bacteria" },
+      { "type": "part_of", "facet": "how", "targetId": "plant_cell" },
+      { "type": "related", "facet": "practice", "targetId": "plant_cell" }
+    ]
+  },
+  {
+    "id": "bacteria",
+    "title": "细菌",
+    "body": "细菌是原核生物，缺乏细胞核，但具有细胞壁和多样的代谢方式。",
+    "mentions": {},
+    "relations": [
+      { "type": "related", "facet": "in_life", "targetId": "protoplast" },
+      { "type": "compare_with", "facet": "compare", "targetId": "plant_cell" }
+    ]
+  }
+]
