@@ -243,6 +243,43 @@ select {
   outline: 1px solid rgba(201, 101, 42, 0.12);
 }
 
+.coverage {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.coverage--types {
+  margin-top: 10px;
+}
+
+.coverage--missing {
+  margin-top: 12px;
+}
+
+.coverage__item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid var(--panel-border);
+  font-size: 13px;
+  color: var(--text);
+}
+
+.coverage__item--compact {
+  font-size: 12px;
+}
+
+.coverage__item--missing {
+  border-color: #c5452c;
+  background: #fff0eb;
+  color: #8a2b1d;
+}
+
 textarea {
   resize: vertical;
 }

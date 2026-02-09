@@ -15,6 +15,10 @@
 - Node 编辑区包含 `Mention Suggestions`，根据 body 内容扫描已存在节点标题，给出未被 mentions 覆盖的建议，点击即可一键添加。
 - Chain 的每个 step 在答案区域下方也提供 `Mention Suggestions`，基于 child/adult answers 的文本内容生成建议。
 
+## Coverage 指标
+- Coverage 统计节点 relations 在 5 个 facet（what/how/in_life/compare/practice）上的数量，缺失项会提示 `missing`。
+- 目标是让节点在主要 facet 上都有覆盖；通过新增/调整 relations 的 `facet` 来补齐缺口。
+
 ## 保存与 lint
 - 保存前会进行轻量校验（id/title/topicNodeId 等必填、关联目标存在等）。校验不通过会阻止保存并展示错误列表。
 - `Content lint` 仍是权威门禁；即使保存成功，也应以 `pnpm lint:content` 的结果为最终准入标准。

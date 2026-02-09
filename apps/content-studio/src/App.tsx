@@ -853,6 +853,30 @@ const App: React.FC = () => {
   const chainIdIssues = getLintIssuesForTarget(chainIdTarget);
   const chainTitleIssues = getLintIssuesForTarget(chainTitleTarget);
   const chainTopicIssues = getLintIssuesForTarget(chainTopicTarget);
+  const facetCoverage = React.useMemo(() => {
+    const counts = new Map<Facet, number>();
+    FACETS.forEach((facet) => counts.set(facet, 0));
+    draft.relations.forEach((relation) => {
+      counts.set(relation.facet, (counts.get(relation.facet) ?? 0) + 1);
+    });
+    return counts;
+  }, [draft.relations]);
+  const relationTypeCoverage = React.useMemo(() => {
+    const counts = new Map<RelationType, number>();
+    RELATION_TYPES.forEach((type) => counts.set(type, 0));
+    draft.relations.forEach((relation) => {
+      counts.set(relation.type, (counts.get(relation.type) ?? 0) + 1);
+    });
+    return counts;
+  }, [draft.relations]);
+  const chainStats = React.useMemo(() => {
+    const stepCount = chainDraft.steps.length;
+    const mentionCount = chainDraft.steps.reduce((sum, step) => sum + step.mentions.length, 0);
+    const missingMentionSteps = chainDraft.steps
+      .map((step, index) => ({ id: step.id, index, count: step.mentions.length }))
+      .filter((step) => step.count === 0);
+    return { stepCount, mentionCount, missingMentionSteps };
+  }, [chainDraft.steps]);
 
   return (
     <div className="studio">
@@ -1072,6 +1096,42 @@ const App: React.FC = () => {
                   </span>
                 )}
               </label>
+
+              <div className="form__section">
+                <div className="form__section-header">
+                  <h3>Coverage</h3>
+                </div>
+                <div className="coverage">
+                  {FACETS.map((facet) => {
+                    const count = facetCoverage.get(facet) ?? 0;
+                    return (
+                      <div
+                        key={facet}
+                        className={classNames(
+                          "coverage__item",
+                          count === 0 && "coverage__item--missing"
+                        )}
+                      >
+                        <span>{facet}</span>
+                        <span>
+                          {count} {count === 0 ? "(missing)" : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="coverage coverage--types">
+                  {RELATION_TYPES.map((type) => {
+                    const count = relationTypeCoverage.get(type) ?? 0;
+                    return (
+                      <div key={type} className="coverage__item coverage__item--compact">
+                        <span>{type}</span>
+                        <span>{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div
                 className={classNames(
@@ -1481,6 +1541,32 @@ const App: React.FC = () => {
                   </span>
                 )}
               </label>
+
+              <div className="form__section">
+                <div className="form__section-header">
+                  <h3>Chain stats</h3>
+                </div>
+                <div className="coverage">
+                  <div className="coverage__item coverage__item--compact">
+                    <span>steps</span>
+                    <span>{chainStats.stepCount}</span>
+                  </div>
+                  <div className="coverage__item coverage__item--compact">
+                    <span>mentions</span>
+                    <span>{chainStats.mentionCount}</span>
+                  </div>
+                </div>
+                {chainStats.missingMentionSteps.length > 0 && (
+                  <div className="coverage coverage--missing">
+                    {chainStats.missingMentionSteps.map((step) => (
+                      <div key={step.id} className="coverage__item coverage__item--missing">
+                        <span>{step.id}</span>
+                        <span>mentions missing</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="form__section">
                 <div className="form__section-header">

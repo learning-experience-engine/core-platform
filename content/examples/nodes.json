@@ -4,28 +4,71 @@
     "title": "植物细胞",
     "body": "植物细胞具有细胞壁、细胞膜、叶绿体等结构。研究细胞结构时常会用到[原生质体]来观察膜系统。",
     "mentions": {
-      "原生质体": "protoplast"
+      "原生质体": "protoplast",
+      "细胞壁": "cell_wall"
     },
     "relations": [
-      { "type": "has_part", "facet": "what", "to": "cell_wall", "label": "细胞壁" },
-      { "type": "has_part", "facet": "what", "to": "membrane", "label": "细胞膜" },
-      { "type": "related", "facet": "how", "to": "protoplast", "label": "实验制备" },
-      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "细胞壁对比" }
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "cell_wall",
+        "label": "细胞壁"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "membrane",
+        "label": "细胞膜"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "protoplast",
+        "label": "实验制备"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "bacteria",
+        "label": "细胞壁对比"
+      }
     ]
   },
   {
     "id": "protoplast",
     "title": "原生质体",
-    "aliases": ["去壁细胞"],
+    "aliases": [
+      "去壁细胞"
+    ],
     "body": "原生质体是去除了细胞壁的细胞内容物集合，可用于研究细胞膜与信号过程。对比[细菌]可以帮助理解细胞壁差异。",
     "mentions": {
       "细菌": "bacteria"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "来源" },
-      { "type": "related", "facet": "how", "to": "membrane", "label": "膜系统观察" },
-      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "壁结构对比" },
-      { "type": "related", "facet": "practice", "to": "cell_wall", "label": "酶解制备" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "plant_cell",
+        "label": "来源"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "membrane",
+        "label": "膜系统观察"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "bacteria",
+        "label": "壁结构对比"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "cell_wall",
+        "label": "酶解制备"
+      }
     ]
   },
   {
@@ -34,10 +77,30 @@
     "body": "细菌是原核生物，缺乏细胞核，但具有细胞壁和多样的代谢方式。",
     "mentions": {},
     "relations": [
-      { "type": "has_part", "facet": "what", "to": "cell_wall", "label": "细胞壁" },
-      { "type": "compare_with", "facet": "compare", "to": "plant_cell", "label": "细胞结构差异" },
-      { "type": "related", "facet": "in_life", "to": "membrane", "label": "膜上的营养转运" },
-      { "type": "related", "facet": "practice", "to": "protoplast", "label": "实验对照" }
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "cell_wall",
+        "label": "细胞壁"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "plant_cell",
+        "label": "细胞结构差异"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "membrane",
+        "label": "膜上的营养转运"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "protoplast",
+        "label": "实验对照"
+      }
     ]
   },
   {
@@ -46,10 +109,30 @@
     "body": "细胞壁为细胞提供机械支撑与保护，在植物与细菌中成分差异明显。",
     "mentions": {},
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "植物结构" },
-      { "type": "part_of", "facet": "what", "to": "bacteria", "label": "细菌结构" },
-      { "type": "compare_with", "facet": "compare", "to": "membrane", "label": "结构差异" },
-      { "type": "related", "facet": "practice", "to": "protoplast", "label": "酶解处理" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "plant_cell",
+        "label": "植物结构"
+      },
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "bacteria",
+        "label": "细菌结构"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "membrane",
+        "label": "结构差异"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "protoplast",
+        "label": "酶解处理"
+      }
     ]
   },
   {
@@ -58,10 +141,30 @@
     "body": "细胞膜负责物质交换与信号传递，是理解细胞行为的关键结构。",
     "mentions": {},
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "植物结构" },
-      { "type": "related", "facet": "how", "to": "protoplast", "label": "膜系统观察" },
-      { "type": "related", "facet": "in_life", "to": "bacteria", "label": "营养摄取" },
-      { "type": "compare_with", "facet": "compare", "to": "cell_wall", "label": "差异" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "plant_cell",
+        "label": "植物结构"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "protoplast",
+        "label": "膜系统观察"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "bacteria",
+        "label": "营养摄取"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "cell_wall",
+        "label": "差异"
+      }
     ]
   },
   {
@@ -77,28 +180,85 @@
       "台风": "typhoon"
     },
     "relations": [
-      { "type": "has_part", "facet": "what", "to": "air_pressure", "label": "气压" },
-      { "type": "has_part", "facet": "what", "to": "wind", "label": "风" },
-      { "type": "related", "facet": "how", "to": "cloud", "label": "云的形成" },
-      { "type": "related", "facet": "in_life", "to": "rain", "label": "出行影响" },
-      { "type": "related", "facet": "practice", "to": "humidity", "label": "观测湿度" },
-      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "常态与极端" }
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "air_pressure",
+        "label": "气压"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "wind",
+        "label": "风"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "cloud",
+        "label": "云的形成"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "rain",
+        "label": "出行影响"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "humidity",
+        "label": "观测湿度"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "typhoon",
+        "label": "常态与极端"
+      }
     ]
   },
   {
     "id": "air_pressure",
     "title": "气压",
-    "aliases": ["大气压"],
+    "aliases": [
+      "大气压"
+    ],
     "body": "气压是空气对地表的压力，高低变化会推动[风]并预示天气转变。",
     "mentions": {
       "风": "wind"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "大气状态" },
-      { "type": "related", "facet": "how", "to": "wind", "label": "压差驱动" },
-      { "type": "related", "facet": "in_life", "to": "weather", "label": "预报依据" },
-      { "type": "related", "facet": "practice", "to": "cloud", "label": "观测判断" },
-      { "type": "compare_with", "facet": "compare", "to": "humidity", "label": "量纲对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "大气状态"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "wind",
+        "label": "压差驱动"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "weather",
+        "label": "预报依据"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "cloud",
+        "label": "观测判断"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "humidity",
+        "label": "量纲对比"
+      }
     ]
   },
   {
@@ -110,27 +270,79 @@
       "台风": "typhoon"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "大气运动" },
-      { "type": "related", "facet": "how", "to": "air_pressure", "label": "压差驱动" },
-      { "type": "related", "facet": "in_life", "to": "rain", "label": "影响降雨" },
-      { "type": "related", "facet": "practice", "to": "cloud", "label": "观测风向" },
-      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "强度差异" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "大气运动"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "air_pressure",
+        "label": "压差驱动"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "rain",
+        "label": "影响降雨"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "cloud",
+        "label": "观测风向"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "typhoon",
+        "label": "强度差异"
+      }
     ]
   },
   {
     "id": "humidity",
     "title": "湿度",
-    "aliases": ["空气湿度"],
+    "aliases": [
+      "空气湿度"
+    ],
     "body": "湿度描述空气中水汽含量，决定体感并影响[降雨]可能性。",
     "mentions": {
       "降雨": "rain"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "水汽含量" },
-      { "type": "related", "facet": "how", "to": "cloud", "label": "凝结条件" },
-      { "type": "related", "facet": "in_life", "to": "rain", "label": "闷热与降雨" },
-      { "type": "related", "facet": "practice", "to": "weather", "label": "湿度计观测" },
-      { "type": "compare_with", "facet": "compare", "to": "air_pressure", "label": "量纲对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "水汽含量"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "cloud",
+        "label": "凝结条件"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "rain",
+        "label": "闷热与降雨"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "weather",
+        "label": "湿度计观测"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "air_pressure",
+        "label": "量纲对比"
+      }
     ]
   },
   {
@@ -141,11 +353,36 @@
       "降雨": "rain"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "可见水汽" },
-      { "type": "related", "facet": "how", "to": "humidity", "label": "凝结条件" },
-      { "type": "related", "facet": "in_life", "to": "wind", "label": "云系移动" },
-      { "type": "related", "facet": "practice", "to": "weather", "label": "观云识天" },
-      { "type": "compare_with", "facet": "compare", "to": "rain", "label": "云与雨" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "可见水汽"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "humidity",
+        "label": "凝结条件"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "wind",
+        "label": "云系移动"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "weather",
+        "label": "观云识天"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "rain",
+        "label": "云与雨"
+      }
     ]
   },
   {
@@ -157,11 +394,36 @@
       "湿度": "humidity"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "水循环" },
-      { "type": "related", "facet": "how", "to": "cloud", "label": "凝结成雨" },
-      { "type": "related", "facet": "in_life", "to": "wind", "label": "出行影响" },
-      { "type": "related", "facet": "practice", "to": "weather", "label": "雨量记录" },
-      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "强度对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "水循环"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "cloud",
+        "label": "凝结成雨"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "wind",
+        "label": "出行影响"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "weather",
+        "label": "雨量记录"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "typhoon",
+        "label": "强度对比"
+      }
     ]
   },
   {
@@ -174,11 +436,36 @@
       "降雨": "rain"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "weather", "label": "极端天气" },
-      { "type": "related", "facet": "how", "to": "wind", "label": "风场结构" },
-      { "type": "related", "facet": "in_life", "to": "rain", "label": "灾害影响" },
-      { "type": "related", "facet": "practice", "to": "air_pressure", "label": "预警监测" },
-      { "type": "compare_with", "facet": "compare", "to": "wind", "label": "强度差异" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "weather",
+        "label": "极端天气"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "wind",
+        "label": "风场结构"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "rain",
+        "label": "灾害影响"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "air_pressure",
+        "label": "预警监测"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "wind",
+        "label": "强度差异"
+      }
     ]
   },
   {
@@ -193,13 +480,48 @@
       "皮脂腺": "sebaceous_gland"
     },
     "relations": [
-      { "type": "has_part", "facet": "what", "to": "epidermis", "label": "表皮" },
-      { "type": "has_part", "facet": "what", "to": "dermis", "label": "真皮" },
-      { "type": "has_part", "facet": "what", "to": "hypodermis", "label": "皮下组织" },
-      { "type": "related", "facet": "how", "to": "keratinocyte", "label": "角质化更新" },
-      { "type": "related", "facet": "in_life", "to": "sweat_gland", "label": "出汗调温" },
-      { "type": "related", "facet": "practice", "to": "sebaceous_gland", "label": "清洁控油" },
-      { "type": "compare_with", "facet": "compare", "to": "membrane", "label": "屏障对比" }
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "epidermis",
+        "label": "表皮"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "dermis",
+        "label": "真皮"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "hypodermis",
+        "label": "皮下组织"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "keratinocyte",
+        "label": "角质化更新"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "sweat_gland",
+        "label": "出汗调温"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "sebaceous_gland",
+        "label": "清洁控油"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "membrane",
+        "label": "屏障对比"
+      }
     ]
   },
   {
@@ -211,12 +533,42 @@
       "黑色素": "melanin"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤外层" },
-      { "type": "has_part", "facet": "what", "to": "keratinocyte", "label": "主要细胞" },
-      { "type": "related", "facet": "how", "to": "melanin", "label": "色素分布" },
-      { "type": "related", "facet": "in_life", "to": "skin_microbiome", "label": "表面生态" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "防晒修复" },
-      { "type": "compare_with", "facet": "compare", "to": "dermis", "label": "层次对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "skin",
+        "label": "皮肤外层"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "keratinocyte",
+        "label": "主要细胞"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "melanin",
+        "label": "色素分布"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin_microbiome",
+        "label": "表面生态"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "防晒修复"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "dermis",
+        "label": "层次对比"
+      }
     ]
   },
   {
@@ -229,13 +581,48 @@
       "皮下组织": "hypodermis"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤中层" },
-      { "type": "has_part", "facet": "what", "to": "sweat_gland", "label": "汗腺" },
-      { "type": "has_part", "facet": "what", "to": "sebaceous_gland", "label": "皮脂腺" },
-      { "type": "related", "facet": "how", "to": "hypodermis", "label": "支撑连接" },
-      { "type": "related", "facet": "in_life", "to": "sweat_gland", "label": "排汗通道" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "按摩护理" },
-      { "type": "compare_with", "facet": "compare", "to": "epidermis", "label": "结构对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "skin",
+        "label": "皮肤中层"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "sweat_gland",
+        "label": "汗腺"
+      },
+      {
+        "type": "has_part",
+        "facet": "what",
+        "to": "sebaceous_gland",
+        "label": "皮脂腺"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "hypodermis",
+        "label": "支撑连接"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "sweat_gland",
+        "label": "排汗通道"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "按摩护理"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "epidermis",
+        "label": "结构对比"
+      }
     ]
   },
   {
@@ -247,11 +634,36 @@
       "皮下组织": "hypodermis"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤深层" },
-      { "type": "related", "facet": "how", "to": "dermis", "label": "连接支撑" },
-      { "type": "related", "facet": "in_life", "to": "skin", "label": "保温储能" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "体重管理" },
-      { "type": "compare_with", "facet": "compare", "to": "dermis", "label": "脂肪层对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "skin",
+        "label": "皮肤深层"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "dermis",
+        "label": "连接支撑"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin",
+        "label": "保温储能"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "体重管理"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "dermis",
+        "label": "脂肪层对比"
+      }
     ]
   },
   {
@@ -263,11 +675,36 @@
       "表皮": "epidermis"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "epidermis", "label": "表皮细胞" },
-      { "type": "related", "facet": "how", "to": "melanin", "label": "色素吸收" },
-      { "type": "related", "facet": "in_life", "to": "skin", "label": "角质更新" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "保湿修复" },
-      { "type": "compare_with", "facet": "compare", "to": "sebaceous_gland", "label": "细胞与腺体对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "epidermis",
+        "label": "表皮细胞"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "melanin",
+        "label": "色素吸收"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin",
+        "label": "角质更新"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "保湿修复"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "sebaceous_gland",
+        "label": "细胞与腺体对比"
+      }
     ]
   },
   {
@@ -279,11 +716,36 @@
       "表皮": "epidermis"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "epidermis", "label": "表皮色素" },
-      { "type": "related", "facet": "how", "to": "keratinocyte", "label": "合成转运" },
-      { "type": "related", "facet": "in_life", "to": "skin", "label": "防晒作用" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "防晒护肤" },
-      { "type": "compare_with", "facet": "compare", "to": "keratinocyte", "label": "色素与细胞对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "epidermis",
+        "label": "表皮色素"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "keratinocyte",
+        "label": "合成转运"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin",
+        "label": "防晒作用"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "防晒护肤"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "keratinocyte",
+        "label": "色素与细胞对比"
+      }
     ]
   },
   {
@@ -295,11 +757,36 @@
       "表皮": "epidermis"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "dermis", "label": "真皮结构" },
-      { "type": "related", "facet": "how", "to": "skin", "label": "排汗散热" },
-      { "type": "related", "facet": "in_life", "to": "skin", "label": "运动出汗" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "补水降温" },
-      { "type": "compare_with", "facet": "compare", "to": "sebaceous_gland", "label": "分泌物对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "dermis",
+        "label": "真皮结构"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "skin",
+        "label": "排汗散热"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin",
+        "label": "运动出汗"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "补水降温"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "sebaceous_gland",
+        "label": "分泌物对比"
+      }
     ]
   },
   {
@@ -311,11 +798,36 @@
       "皮肤微生物群": "skin_microbiome"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "dermis", "label": "真皮结构" },
-      { "type": "related", "facet": "how", "to": "skin", "label": "分泌皮脂" },
-      { "type": "related", "facet": "in_life", "to": "skin_microbiome", "label": "油脂环境" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "清洁控油" },
-      { "type": "compare_with", "facet": "compare", "to": "sweat_gland", "label": "分泌对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "dermis",
+        "label": "真皮结构"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "skin",
+        "label": "分泌皮脂"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin_microbiome",
+        "label": "油脂环境"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "清洁控油"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "sweat_gland",
+        "label": "分泌对比"
+      }
     ]
   },
   {
@@ -326,11 +838,36 @@
       "皮脂腺": "sebaceous_gland"
     },
     "relations": [
-      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤表面生态" },
-      { "type": "related", "facet": "how", "to": "sebaceous_gland", "label": "油脂供养" },
-      { "type": "related", "facet": "in_life", "to": "skin", "label": "健康与异味" },
-      { "type": "related", "facet": "practice", "to": "skin", "label": "温和清洁" },
-      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "微生物类型对比" }
+      {
+        "type": "part_of",
+        "facet": "what",
+        "to": "skin",
+        "label": "皮肤表面生态"
+      },
+      {
+        "type": "related",
+        "facet": "how",
+        "to": "sebaceous_gland",
+        "label": "油脂供养"
+      },
+      {
+        "type": "related",
+        "facet": "in_life",
+        "to": "skin",
+        "label": "健康与异味"
+      },
+      {
+        "type": "related",
+        "facet": "practice",
+        "to": "skin",
+        "label": "温和清洁"
+      },
+      {
+        "type": "compare_with",
+        "facet": "compare",
+        "to": "bacteria",
+        "label": "微生物类型对比"
+      }
     ]
   }
 ]
