@@ -62,5 +62,120 @@
       { "type": "related", "facet": "in_life", "to": "bacteria", "label": "营养摄取" },
       { "type": "compare_with", "facet": "compare", "to": "cell_wall", "label": "差异" }
     ]
+  },
+  {
+    "id": "weather",
+    "title": "天气",
+    "body": "天气是大气在某地短时间内的状态变化，常由[气压]、[风]、[湿度]、[云]与[降雨]共同塑造，极端时会出现[台风]。",
+    "mentions": {
+      "气压": "air_pressure",
+      "风": "wind",
+      "湿度": "humidity",
+      "云": "cloud",
+      "降雨": "rain",
+      "台风": "typhoon"
+    },
+    "relations": [
+      { "type": "has_part", "facet": "what", "to": "air_pressure", "label": "气压" },
+      { "type": "has_part", "facet": "what", "to": "wind", "label": "风" },
+      { "type": "related", "facet": "how", "to": "cloud", "label": "云的形成" },
+      { "type": "related", "facet": "in_life", "to": "rain", "label": "出行影响" },
+      { "type": "related", "facet": "practice", "to": "humidity", "label": "观测湿度" },
+      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "常态与极端" }
+    ]
+  },
+  {
+    "id": "air_pressure",
+    "title": "气压",
+    "body": "气压是空气对地表的压力，高低变化会推动[风]并预示天气转变。",
+    "mentions": {
+      "风": "wind"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "大气状态" },
+      { "type": "related", "facet": "how", "to": "wind", "label": "压差驱动" },
+      { "type": "related", "facet": "in_life", "to": "weather", "label": "预报依据" },
+      { "type": "related", "facet": "practice", "to": "cloud", "label": "观测判断" },
+      { "type": "compare_with", "facet": "compare", "to": "humidity", "label": "量纲对比" }
+    ]
+  },
+  {
+    "id": "wind",
+    "title": "风",
+    "body": "风是空气流动，由[气压]差异驱动，强风可能发展为[台风]。",
+    "mentions": {
+      "气压": "air_pressure",
+      "台风": "typhoon"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "大气运动" },
+      { "type": "related", "facet": "how", "to": "air_pressure", "label": "压差驱动" },
+      { "type": "related", "facet": "in_life", "to": "rain", "label": "影响降雨" },
+      { "type": "related", "facet": "practice", "to": "cloud", "label": "观测风向" },
+      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "强度差异" }
+    ]
+  },
+  {
+    "id": "humidity",
+    "title": "湿度",
+    "body": "湿度描述空气中水汽含量，决定体感并影响[降雨]可能性。",
+    "mentions": {
+      "降雨": "rain"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "水汽含量" },
+      { "type": "related", "facet": "how", "to": "cloud", "label": "凝结条件" },
+      { "type": "related", "facet": "in_life", "to": "rain", "label": "闷热与降雨" },
+      { "type": "related", "facet": "practice", "to": "weather", "label": "湿度计观测" },
+      { "type": "compare_with", "facet": "compare", "to": "air_pressure", "label": "量纲对比" }
+    ]
+  },
+  {
+    "id": "cloud",
+    "title": "云",
+    "body": "云是水汽凝结形成的可见体，常预示[降雨]或天气转变。",
+    "mentions": {
+      "降雨": "rain"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "可见水汽" },
+      { "type": "related", "facet": "how", "to": "humidity", "label": "凝结条件" },
+      { "type": "related", "facet": "in_life", "to": "wind", "label": "云系移动" },
+      { "type": "related", "facet": "practice", "to": "weather", "label": "观云识天" },
+      { "type": "compare_with", "facet": "compare", "to": "rain", "label": "云与雨" }
+    ]
+  },
+  {
+    "id": "rain",
+    "title": "降雨",
+    "body": "降雨是水汽凝结后落回地面的过程，与[云]、[湿度]密切相关。",
+    "mentions": {
+      "云": "cloud",
+      "湿度": "humidity"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "水循环" },
+      { "type": "related", "facet": "how", "to": "cloud", "label": "凝结成雨" },
+      { "type": "related", "facet": "in_life", "to": "wind", "label": "出行影响" },
+      { "type": "related", "facet": "practice", "to": "weather", "label": "雨量记录" },
+      { "type": "compare_with", "facet": "compare", "to": "typhoon", "label": "强度对比" }
+    ]
+  },
+  {
+    "id": "typhoon",
+    "title": "台风",
+    "body": "台风是热带气旋，在强[风]与低[气压]下形成，常伴随强[降雨]。",
+    "mentions": {
+      "风": "wind",
+      "气压": "air_pressure",
+      "降雨": "rain"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "weather", "label": "极端天气" },
+      { "type": "related", "facet": "how", "to": "wind", "label": "风场结构" },
+      { "type": "related", "facet": "in_life", "to": "rain", "label": "灾害影响" },
+      { "type": "related", "facet": "practice", "to": "air_pressure", "label": "预警监测" },
+      { "type": "compare_with", "facet": "compare", "to": "wind", "label": "强度差异" }
+    ]
   }
 ]

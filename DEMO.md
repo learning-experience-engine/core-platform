@@ -37,3 +37,8 @@ Open: http://localhost:5173
 - Stack only: http://localhost:5173/?stack=plant_cell,protoplast,membrane
 - Chain only: http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult
 - Mixed: http://localhost:5173/?stack=plant_cell,protoplast&chain=plant_cell_intro&step=1&age=child
+
+## Weather URLs
+
+- Weather deep-dive: http://localhost:5173/?stack=weather,air_pressure,wind
+- Weather chain: http://localhost:5173/?stack=weather&chain=weather_intro&step=0&age=adult
