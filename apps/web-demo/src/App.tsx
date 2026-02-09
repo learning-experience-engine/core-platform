@@ -334,6 +334,7 @@ export const App = (): ReactElement => {
                   state={chainState}
                   dispatch={chainDispatch}
                   onMentionNavigate={handleMentionClick}
+                  nodesById={nodesById}
                 />
               ) : null}
             </>
@@ -346,6 +347,7 @@ export const App = (): ReactElement => {
                   state={chainState}
                   dispatch={chainDispatch}
                   onMentionNavigate={handleMentionClick}
+                  nodesById={nodesById}
                 />
               ) : null}
             </>

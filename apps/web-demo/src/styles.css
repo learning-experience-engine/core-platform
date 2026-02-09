@@ -311,6 +311,17 @@ body {
   cursor: pointer;
 }
 
+.dev-warning {
+  border: 1px solid #d26a00;
+  background: rgba(210, 106, 0, 0.08);
+  color: #8a4b00;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: grid;
+  gap: 4px;
+}
+
 .question-chain__kicker {
   margin: 0 0 6px;
   font-size: 11px;
