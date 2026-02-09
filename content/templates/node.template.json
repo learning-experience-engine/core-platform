@@ -1,0 +1,15 @@
+{
+  "id": "new_node_id",
+  "title": "节点标题",
+  "body": "一句话解释核心概念，并用[相关术语]引导深入。",
+  "mentions": {
+    "相关术语": "related_node_id"
+  },
+  "relations": [
+    { "type": "has_part", "facet": "what", "to": "related_node_id", "label": "组成/部分" },
+    { "type": "related", "facet": "how", "to": "related_node_id", "label": "机制/过程" },
+    { "type": "related", "facet": "in_life", "to": "related_node_id", "label": "真实场景" },
+    { "type": "compare_with", "facet": "compare", "to": "related_node_id", "label": "对比对象" },
+    { "type": "related", "facet": "practice", "to": "related_node_id", "label": "动手/实践" }
+  ]
+}
