@@ -39,6 +39,16 @@ type NeighborhoodPanelProps = {
   onNavigate?: (nodeId: string) => void;
 };
 
+type DemoPreset = {
+  id: string;
+  label: string;
+  description: string;
+  stack: string[];
+  chainId?: string;
+  stepIndex?: number;
+  age?: "child" | "adult";
+};
+
 const NeighborhoodPanel = ({ centerId, nodesById, onNavigate }: NeighborhoodPanelProps) => {
   const [facet, setFacet] = useReducer(
     (_: Facet | "all", next: Facet | "all") => next,
@@ -142,6 +152,32 @@ export const App = (): ReactElement => {
   const previous = getNodeById(prevId, nodes);
   const breadcrumb = getBreadcrumb(state);
   const activeChain = chainState.chainId ? chainsById[chainState.chainId] : undefined;
+  const demoPresets: DemoPreset[] = [
+    {
+      id: "deep-dive",
+      label: "Deep-dive",
+      description: "stack: plant_cell > protoplast > membrane",
+      stack: ["plant_cell", "protoplast", "membrane"]
+    },
+    {
+      id: "question-chain",
+      label: "Question chain",
+      description: "chain: plant_cell_intro (adult, step 0)",
+      stack: ["plant_cell"],
+      chainId: "plant_cell_intro",
+      stepIndex: 0,
+      age: "adult"
+    },
+    {
+      id: "mixed",
+      label: "Mixed",
+      description: "stack + chain (child, step 1)",
+      stack: ["plant_cell", "protoplast"],
+      chainId: "plant_cell_intro",
+      stepIndex: 1,
+      age: "child"
+    }
+  ];
 
   const handleMentionClick = (nodeId: string) => {
     dispatch(push(nodeId));
@@ -153,6 +189,19 @@ export const App = (): ReactElement => {
 
   const handleBreadcrumbClick = (index: number) => {
     dispatch(setStack(breadcrumb.slice(0, index + 1)));
+  };
+
+  const handlePresetClick = (preset: DemoPreset) => {
+    dispatch(setStack(preset.stack));
+    if (!preset.chainId) {
+      chainDispatch({ type: "EXIT" });
+      return;
+    }
+    chainDispatch({ type: "SET_CHAIN", chainId: preset.chainId });
+    chainDispatch({ type: "SET_STEP", index: preset.stepIndex ?? 0 });
+    if (preset.age) {
+      chainDispatch({ type: "SET_AGE", age: preset.age });
+    }
   };
 
   useEffect(() => {
@@ -195,6 +244,22 @@ export const App = (): ReactElement => {
     <div className="app">
       <header className="app__header">
         <h1>Learning Experience Engine</h1>
+        <section className="demo-presets" aria-label="Demo presets">
+          <div className="demo-presets__label">Demo presets</div>
+          <div className="demo-presets__list">
+            {demoPresets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="demo-presets__button"
+                onClick={() => handlePresetClick(preset)}
+              >
+                <span className="demo-presets__title">{preset.label}</span>
+                <span className="demo-presets__desc">{preset.description}</span>
+              </button>
+            ))}
+          </div>
+        </section>
         <nav className="breadcrumb">
           {breadcrumb.map((id, index) => {
             const node = getNodeById(id, nodes);
