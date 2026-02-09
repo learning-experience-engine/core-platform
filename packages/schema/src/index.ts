@@ -4,6 +4,8 @@ export type Facet = "what" | "how" | "in_life" | "compare" | "practice";
 
 export type AgeBand = "child" | "adult";
 
+export type LocalizedText = string | Record<string, string>;
+
 export type Relation = {
   type: RelationType;
   facet: Facet;
@@ -14,7 +16,8 @@ export type Relation = {
 export type Node = {
   id: string;
   title: string;
-  body: string;
+  aliases?: string[];
+  body: LocalizedText;
   mentions: Record<string, string>;
   relations: Relation[];
 };

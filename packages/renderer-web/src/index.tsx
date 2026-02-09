@@ -1,5 +1,13 @@
 import type { NodeId, QuestionChainAction, QuestionChainState } from "@lxp/core";
-import type { AgeBand, ChainStep, Facet, Node, QuestionChain, RelationType } from "@lxp/schema";
+import type {
+  AgeBand,
+  ChainStep,
+  Facet,
+  LocalizedText,
+  Node,
+  QuestionChain,
+  RelationType
+} from "@lxp/schema";
 import { groupRelationsByFacet, type RelationView } from "@lxp/core";
 import { getNeighborhood, type NeighborhoodFacet } from "@lxp/graph";
 import React from "react";
@@ -142,10 +150,6 @@ export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onN
     setActiveFacet(FACETS[nextIndex]);
   };
 
-  if (node.relations.length === 0) {
-    return <p className="node-card__empty">No relations</p>;
-  }
-
   return (
     <div className="relation-dock">
       <DevWarning title="Dev warning (relations)" items={missingRelations} />
@@ -170,7 +174,7 @@ export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onN
         ))}
       </div>
       {activeRelations.length === 0 ? (
-        <p className="node-card__empty">No relations</p>
+        <p className="node-card__empty">暂无内容（欢迎贡献）</p>
       ) : (
         <div className="relation-dock__list">
           {[...groupByType(activeRelations).entries()].map(([type, items]) => (
@@ -263,22 +267,28 @@ export const GraphMini: React.FC<GraphMiniProps> = ({
 };
 
 const renderBody = (
-  body: string,
+  body: LocalizedText,
   mentions: Record<string, string>,
   onMentionClick?: (nodeId: string) => void
 ): React.ReactNode[] => {
+  const bodyText = (() => {
+    if (typeof body === "string") return body;
+    if (body.zh) return body.zh ?? "";
+    const first = Object.values(body)[0];
+    return first ?? "";
+  })();
   const parts: React.ReactNode[] = [];
   const regex = /\[(.+?)\]/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(body))) {
+  while ((match = regex.exec(bodyText))) {
     const [raw, term] = match;
     const start = match.index;
     const end = start + raw.length;
 
     if (start > lastIndex) {
-      parts.push(body.slice(lastIndex, start));
+      parts.push(bodyText.slice(lastIndex, start));
     }
 
     const targetId = mentions[term];
@@ -300,8 +310,8 @@ const renderBody = (
     lastIndex = end;
   }
 
-  if (lastIndex < body.length) {
-    parts.push(body.slice(lastIndex));
+  if (lastIndex < bodyText.length) {
+    parts.push(bodyText.slice(lastIndex));
   }
 
   return parts;
@@ -410,6 +420,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
   const step = getStep(chain, currentIndex);
   const isFirst = currentIndex <= 0;
   const isLast = currentIndex >= total - 1;
+  const progress = total === 0 ? 0 : (currentIndex + 1) / total;
   const missingMentions = React.useMemo(
     () => getMissingMentions(step?.mentions, nodesById),
     [step?.mentions, nodesById]
@@ -429,6 +440,12 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
         <div>
           <p className="question-chain__kicker">问题链</p>
           <h3>{chain.title}</h3>
+          <div className="question-chain__progress" aria-hidden="true">
+            <div
+              className="question-chain__progress-bar"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
         </div>
         <div className="question-chain__actions">
           <button
@@ -454,6 +471,9 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
       </header>
       <DevWarning title="Dev warning (chain mentions)" items={missingMentions} />
       <div className="question-chain__body">
+        <p className="question-chain__step">
+          Step {currentIndex + 1} · {step.id}
+        </p>
         <h4>{step.question}</h4>
         <p>{renderMentions(step.answers[state.age], step.mentions, onMentionNavigate)}</p>
       </div>

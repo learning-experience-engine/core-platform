@@ -6,6 +6,7 @@
     { "path": "./packages/content-linter" },
     { "path": "./packages/graph" },
     { "path": "./packages/renderer-web" },
-    { "path": "./apps/web-demo" }
+    { "path": "./apps/web-demo" },
+    { "path": "./apps/content-studio" }
   ]
 }

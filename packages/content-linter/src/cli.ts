@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Node, QuestionChain } from "@lxp/schema";
-import { formatMessages, lintChains, lintNodes } from "./index.js";
+import { formatJson, formatMessages, lintChains, lintNodes } from "./index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,12 +24,33 @@ const readChains = async (inputPath: string): Promise<QuestionChain[]> => {
 };
 
 const run = async (): Promise<number> => {
-  const targetPath = process.argv[2]
-    ? path.resolve(process.cwd(), process.argv[2])
-    : defaultPath;
-  const chainPath = process.argv[3]
-    ? path.resolve(process.cwd(), process.argv[3])
-    : defaultChainPath;
+  const args = process.argv.slice(2);
+  let format: "text" | "json" = "text";
+  const paths: string[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--format") {
+      const next = args[index + 1];
+      if (next) {
+        format = next === "json" ? "json" : "text";
+        index += 1;
+      }
+      continue;
+    }
+    if (arg.startsWith("--format=")) {
+      const value = arg.split("=").slice(1).join("=");
+      format = value === "json" ? "json" : "text";
+      continue;
+    }
+    if (arg.startsWith("-")) {
+      continue;
+    }
+    paths.push(arg);
+  }
+
+  const targetPath = paths[0] ? path.resolve(process.cwd(), paths[0]) : defaultPath;
+  const chainPath = paths[1] ? path.resolve(process.cwd(), paths[1]) : defaultChainPath;
 
   try {
     const nodes = await readNodes(targetPath);
@@ -40,14 +61,17 @@ const run = async (): Promise<number> => {
       errors: [...nodeResult.errors, ...chainResult.errors],
       warnings: [...nodeResult.warnings, ...chainResult.warnings]
     };
-    const lines = formatMessages(result);
-
-    if (lines.length > 0) {
-      for (const line of lines) {
-        if (line.startsWith("[ERROR]")) {
-          console.error(line);
-        } else {
-          console.warn(line);
+    if (format === "json") {
+      console.log(formatJson(result));
+    } else {
+      const lines = formatMessages(result);
+      if (lines.length > 0) {
+        for (const line of lines) {
+          if (line.startsWith("[ERROR]")) {
+            console.error(line);
+          } else {
+            console.warn(line);
+          }
         }
       }
     }

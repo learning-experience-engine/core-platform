@@ -16,7 +16,8 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "lint": "eslint src --ext .ts"
+    "lint": "node dist/cli.js",
+    "lint:code": "eslint src --ext .ts"
   },
   "dependencies": {
     "@lxp/schema": "workspace:*"

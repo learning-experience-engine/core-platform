@@ -46,3 +46,26 @@ Tester: manual (user)
 ## Notes
 
 - Manual run completed; all checks passed.
+
+## Skin domain smoke (manual)
+
+Status: NOT RUN (no interactive browser / GUI access in current environment)
+
+### URLs to test
+- Skin deep-dive (stack): http://localhost:5173/?stack=skin,epidermis,dermis
+- Skin chain (skin_intro): http://localhost:5173/?stack=skin&chain=skin_intro&step=0&age=adult
+- Skin chain (acne_why): http://localhost:5173/?stack=skin&chain=acne_why&step=0&age=adult
+
+### Steps + Expected
+1) Open the skin deep-dive URL
+   - Expected: Card stack loads at `skin` and can navigate via Relations/Neighborhood to `epidermis`, `dermis`, etc.
+   - Expected: URL stack updates as you navigate and refresh preserves state.
+
+2) Start `skin_intro` chain (or open its URL directly)
+   - Expected: Child/Adult toggle changes answer content.
+   - Expected: Clicking mentions (e.g., 表皮/真皮/汗腺/皮脂腺/微生物群) pushes the corresponding card without losing chain state.
+   - Expected: Exit/Close clears `chain/step/age` params from URL.
+
+3) Start `acne_why` chain (or open its URL directly)
+   - Expected: Prev/Next works (no out-of-bounds).
+   - Expected: At least step 1–2 mention navigation works and returns to chain.
