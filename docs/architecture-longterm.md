@@ -144,3 +144,31 @@ M4 Platformize（长期）
 	•	content API + indexing + roles + moderation
 	•	多端 SDK + 发布流程
 	•	AI 辅助生产/学习的安全落地
+
+10. Why this is better than a Wiki (Positioning)
+
+### Not just “knowledge storage”, but “guided learning”
+- Wiki 强在条目与引用；学习者常见痛点是：不知道从哪开始、学到哪算掌握、跳转越多越迷路。
+- LxE 以“可复现学习路径”为中心：从一个问题出发，按 step 引导，最后用 quick check 验证理解。
+
+### Reproducible learning paths (share & replay)
+- URL 同步 stack/chain/step/age，使学习路径可分享、可回放、可复测（不仅是页面链接）。
+
+### Teaching loop: Goal → Summary → Quick Check
+- 每条 chain 可定义学习目标（goal），每步有小结（summary），并用单选自测（check）即时纠偏。
+- 这为 K12/教学场景提供了比条目更直接的教学结构（同时保持向后兼容与可扩展）。
+
+### Concept cards + Graph navigation (structured exploration)
+- 卡片栈支持“术语一键深挖”，并通过 facet 化关系与 1-hop 邻域让探索具有学习维度（what/how/in_life/compare/practice），而不仅是 related links 列表。
+- Graph 是内容底座，链是教学脚本，两者可组合。
+
+### Build-in-public authoring with quality gates
+- Content Studio 降低贡献门槛（编辑 nodes/chains、suggestions、保存即 lint、错误一键定位）。
+- Content Linter + CI gate 保证共创质量与一致性，避免规模增长导致内容崩坏。
+
+### What we are NOT claiming
+- 不声称替代 Wiki 或覆盖所有知识。
+- 不把 AI 当真理来源；AI 主要用于辅助生产/组织/个性化（可审校、可追溯）。
+
+Try it quickly：
+- 建议先看 README/DEMO 中的 3 条演示链（typhoon_safety / sun_tan_uv / acne_why）。
