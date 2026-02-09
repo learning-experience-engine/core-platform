@@ -82,6 +82,54 @@ type DraftChain = {
 
 type Mode = "nodes" | "chains";
 
+type LintLevel = "error" | "warn";
+
+type LintIssue = {
+  level: LintLevel;
+  code: string;
+  message: string;
+  nodeId?: string;
+  chainId?: string;
+  path?: string;
+  suggestions?: string[];
+};
+
+type LintResult = {
+  errors: LintIssue[];
+  warnings: LintIssue[];
+};
+
+type LintApiResponse = {
+  ok?: boolean;
+  format?: "text" | "json";
+  code?: number;
+  stdout?: string;
+  stderr?: string;
+  error?: string;
+  missingDist?: boolean;
+};
+
+const classNames = (...values: Array<string | undefined | false>) => {
+  const next = values.filter(Boolean).join(" ");
+  return next.length > 0 ? next : undefined;
+};
+
+const buildLintTargetKey = (scope: "node" | "chain", id: string, path = ""): string => {
+  return `${scope}:${id}:${encodeURIComponent(path)}`;
+};
+
+const buildNodeMentionPath = (term: string): string => {
+  return `mentions[${JSON.stringify(term)}]`;
+};
+
+const buildChainMentionPath = (index: number, term: string): string => {
+  return `steps[${index}].mentions[${JSON.stringify(term)}]`;
+};
+
+const formatLintMessage = (issue: LintIssue): string => {
+  return issue.message.replace(/^\[(ERROR|WARN)\]\s+/, "").trim();
+};
+
 const getBodyText = (body: LocalizedText, preferred = "zh"): string => {
   if (typeof body === "string") return body;
   if (body[preferred]) return body[preferred] ?? "";
@@ -417,13 +465,36 @@ const saveChain = async (chain: QuestionChain): Promise<void> => {
   }
 };
 
-const runLint = async () => {
-  const response = await fetch("/api/lint", { method: "POST" });
+const runContentLint = async (format: "text" | "json"): Promise<LintApiResponse> => {
+  const response = await fetch(`/api/lint?format=${format}`, { method: "POST" });
+  const payload = (await response.json().catch(() => null)) as LintApiResponse | null;
   if (!response.ok) {
+    if (payload) {
+      return { ...payload, ok: false };
+    }
     const message = await response.text();
     throw new Error(message || "Failed to run lint");
   }
-  return (await response.json()) as { stdout: string; stderr: string; code: number };
+  if (!payload) {
+    throw new Error("Failed to parse lint response");
+  }
+  return { ...payload, ok: true };
+};
+
+const runContentLintBuild = async (): Promise<LintApiResponse> => {
+  const response = await fetch("/api/lint/build", { method: "POST" });
+  const payload = (await response.json().catch(() => null)) as LintApiResponse | null;
+  if (!response.ok) {
+    if (payload) {
+      return { ...payload, ok: false };
+    }
+    const message = await response.text();
+    throw new Error(message || "Failed to build linter");
+  }
+  if (!payload) {
+    throw new Error("Failed to parse build response");
+  }
+  return { ...payload, ok: true };
 };
 
 const App: React.FC = () => {
@@ -439,8 +510,13 @@ const App: React.FC = () => {
   const [search, setSearch] = React.useState("");
   const [chainSearch, setChainSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("");
-  const [lintOutput, setLintOutput] = React.useState<string>("");
   const [lintStatus, setLintStatus] = React.useState<string>("");
+  const [lintNeedsBuild, setLintNeedsBuild] = React.useState(false);
+  const [lintResult, setLintResult] = React.useState<LintResult>({
+    errors: [],
+    warnings: []
+  });
+  const [lintFocusTarget, setLintFocusTarget] = React.useState("");
   const [nodeErrors, setNodeErrors] = React.useState<string[]>([]);
   const [chainErrors, setChainErrors] = React.useState<string[]>([]);
 
@@ -501,6 +577,75 @@ const App: React.FC = () => {
     });
   }, [chains, chainSearch]);
 
+  const lintIssues = React.useMemo(() => {
+    return [...lintResult.errors, ...lintResult.warnings];
+  }, [lintResult.errors, lintResult.warnings]);
+
+  const lintIssuesByTarget = React.useMemo(() => {
+    const map = new Map<string, LintIssue[]>();
+    lintIssues.forEach((issue) => {
+      const key = issue.nodeId
+        ? buildLintTargetKey("node", issue.nodeId, issue.path ?? "")
+        : issue.chainId
+          ? buildLintTargetKey("chain", issue.chainId, issue.path ?? "")
+          : null;
+      if (!key) return;
+      const current = map.get(key);
+      if (current) {
+        current.push(issue);
+      } else {
+        map.set(key, [issue]);
+      }
+    });
+    return map;
+  }, [lintIssues]);
+
+  const getLintIssuesForTarget = (key: string): LintIssue[] => {
+    return lintIssuesByTarget.get(key) ?? [];
+  };
+
+  const parseLintResult = (payload: LintApiResponse): LintResult | null => {
+    if (payload.format !== "json" || !payload.stdout) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(payload.stdout) as LintResult;
+      if (!Array.isArray(parsed.errors) || !Array.isArray(parsed.warnings)) {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const runLintAndUpdate = async (source: "manual" | "auto") => {
+    try {
+      setLintStatus(source === "auto" ? "自动 lint 中..." : "运行中...");
+      setLintNeedsBuild(false);
+      const payload = await runContentLint("json");
+      if (!payload.ok) {
+        if (payload.missingDist) {
+          setLintStatus("Content linter 未构建，请先 build。");
+          setLintNeedsBuild(true);
+          return;
+        }
+        setLintStatus(`Lint failed: ${payload.error ?? "Unknown error"}`);
+        return;
+      }
+      const parsed = parseLintResult(payload);
+      if (!parsed) {
+        setLintStatus("Lint 输出解析失败");
+        return;
+      }
+      setLintResult(parsed);
+      const code = payload.code ?? 0;
+      setLintStatus(code === 0 ? "Lint passed" : `Lint failed (code ${code})`);
+    } catch (error) {
+      setLintStatus(`Lint failed: ${String(error)}`);
+    }
+  };
+
   const handleSave = async () => {
     try {
       const errors = validateNodeDraft(draft, nodes, selectedId);
@@ -517,6 +662,7 @@ const App: React.FC = () => {
       setNodes(updated);
       setSelectedId(payload.id);
       setStatus(`已保存: ${payload.id}`);
+      void runLintAndUpdate("auto");
     } catch (error) {
       setStatus(`保存失败: ${String(error)}`);
     }
@@ -542,6 +688,7 @@ const App: React.FC = () => {
       setChains(updated);
       setSelectedChainId(payload.id);
       setStatus(`已保存: ${payload.id}`);
+      void runLintAndUpdate("auto");
     } catch (error) {
       setStatus(`保存失败: ${String(error)}`);
     }
@@ -572,21 +719,75 @@ const App: React.FC = () => {
   };
 
   const handleLint = async () => {
+    await runLintAndUpdate("manual");
+  };
+
+  const handleBuildLinter = async () => {
     try {
-      setLintStatus("运行中...");
-      const result = await runLint();
-      const lines = [result.stdout, result.stderr].filter(Boolean).join("\n");
-      setLintOutput(lines || "No lint output.");
-      setLintStatus(result.code === 0 ? "Lint passed" : `Lint failed (code ${result.code})`);
+      setLintStatus("正在构建 content-linter...");
+      const payload = await runContentLintBuild();
+      if (!payload.ok) {
+        setLintStatus(`Build failed: ${payload.error ?? "Unknown error"}`);
+        return;
+      }
+      const code = payload.code ?? 0;
+      setLintStatus(code === 0 ? "Build completed." : `Build failed (code ${code})`);
+      if (code === 0) {
+        setLintNeedsBuild(false);
+      }
     } catch (error) {
-      setLintStatus(`Lint failed: ${String(error)}`);
+      setLintStatus(`Build failed: ${String(error)}`);
     }
+  };
+
+  const handleLintIssueClick = (issue: LintIssue) => {
+    if (issue.nodeId) {
+      setMode("nodes");
+      setSelectedId(issue.nodeId);
+    } else if (issue.chainId) {
+      setMode("chains");
+      setSelectedChainId(issue.chainId);
+    }
+
+    const key = issue.nodeId
+      ? buildLintTargetKey("node", issue.nodeId, issue.path ?? "")
+      : issue.chainId
+        ? buildLintTargetKey("chain", issue.chainId, issue.path ?? "")
+        : "";
+    if (!key) return;
+
+    setLintFocusTarget(key);
+    window.setTimeout(() => {
+      const target = document.querySelector(`[data-lint-target="${key}"]`);
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus?.();
+      }
+    }, 80);
+
+    window.setTimeout(() => {
+      setLintFocusTarget((current) => (current === key ? "" : current));
+    }, 2000);
   };
 
   const nodeOptions = nodes.map((node) => ({ id: node.id, title: node.title }));
   const nodeSuggestions = React.useMemo(() => {
     return buildMentionSuggestions(draft.bodyText, nodes, draft.mentions, draft.id).slice(0, 10);
   }, [draft.bodyText, draft.mentions, draft.id, nodes]);
+
+  const nodeIdTarget = buildLintTargetKey("node", draft.id, "id");
+  const nodeTitleTarget = buildLintTargetKey("node", draft.id, "title");
+  const nodeBodyTarget = buildLintTargetKey("node", draft.id, "body");
+  const chainIdTarget = buildLintTargetKey("chain", chainDraft.id, "id");
+  const chainTitleTarget = buildLintTargetKey("chain", chainDraft.id, "title");
+  const chainTopicTarget = buildLintTargetKey("chain", chainDraft.id, "topicNodeId");
+
+  const nodeIdIssues = getLintIssuesForTarget(nodeIdTarget);
+  const nodeTitleIssues = getLintIssuesForTarget(nodeTitleTarget);
+  const nodeBodyIssues = getLintIssuesForTarget(nodeBodyTarget);
+  const chainIdIssues = getLintIssuesForTarget(chainIdTarget);
+  const chainTitleIssues = getLintIssuesForTarget(chainTitleTarget);
+  const chainTopicIssues = getLintIssuesForTarget(chainTopicTarget);
 
   return (
     <div className="studio">
@@ -719,14 +920,29 @@ const App: React.FC = () => {
                 <span>ID</span>
                 <input
                   value={draft.id}
+                  data-lint-target={nodeIdTarget}
+                  className={classNames(
+                    nodeIdIssues.length > 0 && "input--error",
+                    lintFocusTarget === nodeIdTarget && "input--lint-focus"
+                  )}
                   onChange={(event) => setDraft({ ...draft, id: event.target.value })}
                 />
                 {draft.isNew && <span className="form__hint">未保存</span>}
+                {nodeIdIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(nodeIdIssues[0])}
+                  </span>
+                )}
               </label>
               <label>
                 <span>Title</span>
                 <input
                   value={draft.title}
+                  data-lint-target={nodeTitleTarget}
+                  className={classNames(
+                    nodeTitleIssues.length > 0 && "input--error",
+                    lintFocusTarget === nodeTitleTarget && "input--lint-focus"
+                  )}
                   onChange={(event) => {
                     const nextTitle = event.target.value;
                     let nextId = draft.id;
@@ -744,6 +960,11 @@ const App: React.FC = () => {
                     setDraft({ ...draft, title: nextTitle, id: nextId });
                   }}
                 />
+                {nodeTitleIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(nodeTitleIssues[0])}
+                  </span>
+                )}
               </label>
               <label>
                 <span>Aliases</span>
@@ -764,6 +985,11 @@ const App: React.FC = () => {
                 <textarea
                   rows={6}
                   value={draft.bodyText}
+                  data-lint-target={nodeBodyTarget}
+                  className={classNames(
+                    nodeBodyIssues.length > 0 && "input--error",
+                    lintFocusTarget === nodeBodyTarget && "input--lint-focus"
+                  )}
                   onChange={(event) =>
                     setDraft({
                       ...draft,
@@ -772,6 +998,11 @@ const App: React.FC = () => {
                     })
                   }
                 />
+                {nodeBodyIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(nodeBodyIssues[0])}
+                  </span>
+                )}
               </label>
 
               <div className="form__section">
@@ -794,49 +1025,74 @@ const App: React.FC = () => {
                   <p className="form__empty">No mentions</p>
                 ) : (
                   <div className="grid">
-                    {draft.mentions.map((row) => (
-                      <div key={row.id} className="grid__row">
-                        <input
-                          placeholder="Term"
-                          value={row.term}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              mentions: draft.mentions.map((item) =>
-                                item.id === row.id ? { ...item, term: event.target.value } : item
-                              )
-                            });
-                          }}
-                        />
-                        <input
-                          list="node-ids"
-                          placeholder="Target node id"
-                          value={row.targetId}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              mentions: draft.mentions.map((item) =>
-                                item.id === row.id
-                                  ? { ...item, targetId: event.target.value }
-                                  : item
-                              )
-                            });
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="button button--ghost"
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              mentions: draft.mentions.filter((item) => item.id !== row.id)
-                            })
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                    {draft.mentions.map((row) => {
+                      const mentionPath = row.term ? buildNodeMentionPath(row.term) : "";
+                      const mentionTarget = buildLintTargetKey("node", draft.id, mentionPath);
+                      const mentionIssues = mentionPath
+                        ? getLintIssuesForTarget(mentionTarget)
+                        : [];
+                      return (
+                        <React.Fragment key={row.id}>
+                          <div className="grid__row">
+                            <input
+                              placeholder="Term"
+                              value={row.term}
+                              className={classNames(
+                                mentionIssues.length > 0 && "input--error",
+                                lintFocusTarget === mentionTarget && "input--lint-focus"
+                              )}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  mentions: draft.mentions.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, term: event.target.value }
+                                      : item
+                                  )
+                                });
+                              }}
+                            />
+                            <input
+                              list="node-ids"
+                              placeholder="Target node id"
+                              value={row.targetId}
+                              data-lint-target={mentionPath ? mentionTarget : undefined}
+                              className={classNames(
+                                mentionIssues.length > 0 && "input--error",
+                                lintFocusTarget === mentionTarget && "input--lint-focus"
+                              )}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  mentions: draft.mentions.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, targetId: event.target.value }
+                                      : item
+                                  )
+                                });
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="button button--ghost"
+                              onClick={() =>
+                                setDraft({
+                                  ...draft,
+                                  mentions: draft.mentions.filter((item) => item.id !== row.id)
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          {mentionIssues.length > 0 && (
+                            <span className="form__hint form__hint--error">
+                              {formatLintMessage(mentionIssues[0])}
+                            </span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -909,87 +1165,133 @@ const App: React.FC = () => {
                   <p className="form__empty">No relations</p>
                 ) : (
                   <div className="grid grid--relations">
-                    {draft.relations.map((row) => (
-                      <div key={row.id} className="grid__row">
-                        <select
-                          value={row.type}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              relations: draft.relations.map((item) =>
-                                item.id === row.id
-                                  ? { ...item, type: event.target.value as RelationType }
-                                  : item
-                              )
-                            });
-                          }}
-                        >
-                          {RELATION_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={row.facet}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              relations: draft.relations.map((item) =>
-                                item.id === row.id
-                                  ? { ...item, facet: event.target.value as Facet }
-                                  : item
-                              )
-                            });
-                          }}
-                        >
-                          {FACETS.map((facet) => (
-                            <option key={facet} value={facet}>
-                              {facet}
-                            </option>
-                          ))}
-                        </select>
-                        <input
-                          list="node-ids"
-                          placeholder="Target node id"
-                          value={row.to}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              relations: draft.relations.map((item) =>
-                                item.id === row.id ? { ...item, to: event.target.value } : item
-                              )
-                            });
-                          }}
-                        />
-                        <input
-                          placeholder="Label (optional)"
-                          value={row.label}
-                          onChange={(event) => {
-                            setDraft({
-                              ...draft,
-                              relations: draft.relations.map((item) =>
-                                item.id === row.id
-                                  ? { ...item, label: event.target.value }
-                                  : item
-                              )
-                            });
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className="button button--ghost"
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              relations: draft.relations.filter((item) => item.id !== row.id)
-                            })
-                          }
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
+                    {draft.relations.map((row, index) => {
+                      const typeTarget = buildLintTargetKey(
+                        "node",
+                        draft.id,
+                        `relations[${index}].type`
+                      );
+                      const facetTarget = buildLintTargetKey(
+                        "node",
+                        draft.id,
+                        `relations[${index}].facet`
+                      );
+                      const toTarget = buildLintTargetKey(
+                        "node",
+                        draft.id,
+                        `relations[${index}].to`
+                      );
+                      const relationIssues = [
+                        ...getLintIssuesForTarget(typeTarget),
+                        ...getLintIssuesForTarget(facetTarget),
+                        ...getLintIssuesForTarget(toTarget)
+                      ];
+                      return (
+                        <React.Fragment key={row.id}>
+                          <div className="grid__row">
+                            <select
+                              value={row.type}
+                              data-lint-target={typeTarget}
+                              className={classNames(
+                                getLintIssuesForTarget(typeTarget).length > 0 && "input--error",
+                                lintFocusTarget === typeTarget && "input--lint-focus"
+                              )}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  relations: draft.relations.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, type: event.target.value as RelationType }
+                                      : item
+                                  )
+                                });
+                              }}
+                            >
+                              {RELATION_TYPES.map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={row.facet}
+                              data-lint-target={facetTarget}
+                              className={classNames(
+                                getLintIssuesForTarget(facetTarget).length > 0 && "input--error",
+                                lintFocusTarget === facetTarget && "input--lint-focus"
+                              )}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  relations: draft.relations.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, facet: event.target.value as Facet }
+                                      : item
+                                  )
+                                });
+                              }}
+                            >
+                              {FACETS.map((facet) => (
+                                <option key={facet} value={facet}>
+                                  {facet}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              list="node-ids"
+                              placeholder="Target node id"
+                              value={row.to}
+                              data-lint-target={toTarget}
+                              className={classNames(
+                                getLintIssuesForTarget(toTarget).length > 0 && "input--error",
+                                lintFocusTarget === toTarget && "input--lint-focus"
+                              )}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  relations: draft.relations.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, to: event.target.value }
+                                      : item
+                                  )
+                                });
+                              }}
+                            />
+                            <input
+                              placeholder="Label (optional)"
+                              value={row.label}
+                              onChange={(event) => {
+                                setDraft({
+                                  ...draft,
+                                  relations: draft.relations.map((item) =>
+                                    item.id === row.id
+                                      ? { ...item, label: event.target.value }
+                                      : item
+                                  )
+                                });
+                              }}
+                            />
+                            <button
+                              type="button"
+                              className="button button--ghost"
+                              onClick={() =>
+                                setDraft({
+                                  ...draft,
+                                  relations: draft.relations.filter((item) => item.id !== row.id)
+                                })
+                              }
+                            >
+                              Remove
+                            </button>
+                          </div>
+                          {relationIssues.length > 0 && (
+                            <span className="form__hint form__hint--error">
+                              {formatLintMessage(relationIssues[0])}
+                            </span>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1011,15 +1313,30 @@ const App: React.FC = () => {
                 <input
                   value={chainDraft.id}
                   readOnly={!chainDraft.isNew}
+                  data-lint-target={chainIdTarget}
+                  className={classNames(
+                    chainIdIssues.length > 0 && "input--error",
+                    lintFocusTarget === chainIdTarget && "input--lint-focus"
+                  )}
                   onChange={(event) =>
                     setChainDraft({ ...chainDraft, id: event.target.value })
                   }
                 />
+                {chainIdIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(chainIdIssues[0])}
+                  </span>
+                )}
               </label>
               <label>
                 <span>Title</span>
                 <input
                   value={chainDraft.title}
+                  data-lint-target={chainTitleTarget}
+                  className={classNames(
+                    chainTitleIssues.length > 0 && "input--error",
+                    lintFocusTarget === chainTitleTarget && "input--lint-focus"
+                  )}
                   onChange={(event) => {
                     const nextTitle = event.target.value;
                     let nextId = chainDraft.id;
@@ -1037,6 +1354,11 @@ const App: React.FC = () => {
                     setChainDraft({ ...chainDraft, title: nextTitle, id: nextId });
                   }}
                 />
+                {chainTitleIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(chainTitleIssues[0])}
+                  </span>
+                )}
               </label>
               <label>
                 <span>Topic Node</span>
@@ -1044,13 +1366,23 @@ const App: React.FC = () => {
                   list="node-ids"
                   placeholder="topicNodeId"
                   value={chainDraft.topicNodeId}
-                  className={!chainDraft.topicNodeId.trim() ? "input--error" : undefined}
+                  data-lint-target={chainTopicTarget}
+                  className={classNames(
+                    !chainDraft.topicNodeId.trim() && "input--error",
+                    chainTopicIssues.length > 0 && "input--error",
+                    lintFocusTarget === chainTopicTarget && "input--lint-focus"
+                  )}
                   onChange={(event) =>
                     setChainDraft({ ...chainDraft, topicNodeId: event.target.value })
                   }
                 />
                 {!chainDraft.topicNodeId.trim() && (
                   <span className="form__hint form__hint--error">Topic node 不能为空</span>
+                )}
+                {chainTopicIssues.length > 0 && (
+                  <span className="form__hint form__hint--error">
+                    {formatLintMessage(chainTopicIssues[0])}
+                  </span>
                 )}
               </label>
 
@@ -1075,6 +1407,17 @@ const App: React.FC = () => {
                 ) : (
                   <div className="step-list">
                     {chainDraft.steps.map((step, index) => {
+                      const questionTarget = buildLintTargetKey(
+                        "chain",
+                        chainDraft.id,
+                        `steps[${index}].question`
+                      );
+                      const answerTarget = (age: AgeBand) =>
+                        buildLintTargetKey(
+                          "chain",
+                          chainDraft.id,
+                          `steps[${index}].answers.${age}`
+                        );
                       const stepSuggestions = buildMentionSuggestions(
                         `${step.answers.child}\n${step.answers.adult}`,
                         nodes,
@@ -1109,6 +1452,11 @@ const App: React.FC = () => {
                           <textarea
                             rows={3}
                             value={step.question}
+                            data-lint-target={questionTarget}
+                            className={classNames(
+                              getLintIssuesForTarget(questionTarget).length > 0 && "input--error",
+                              lintFocusTarget === questionTarget && "input--lint-focus"
+                            )}
                             onChange={(event) => {
                               setChainDraft({
                                 ...chainDraft,
@@ -1120,6 +1468,11 @@ const App: React.FC = () => {
                               });
                             }}
                           />
+                          {getLintIssuesForTarget(questionTarget).length > 0 && (
+                            <span className="form__hint form__hint--error">
+                              {formatLintMessage(getLintIssuesForTarget(questionTarget)[0])}
+                            </span>
+                          )}
                         </label>
                         <div className="grid grid--answers">
                           {AGE_BANDS.map((age) => (
@@ -1128,6 +1481,12 @@ const App: React.FC = () => {
                               <textarea
                                 rows={3}
                                 value={step.answers[age]}
+                                data-lint-target={answerTarget(age)}
+                                className={classNames(
+                                  getLintIssuesForTarget(answerTarget(age)).length > 0 &&
+                                    "input--error",
+                                  lintFocusTarget === answerTarget(age) && "input--lint-focus"
+                                )}
                                 onChange={(event) => {
                                   setChainDraft({
                                     ...chainDraft,
@@ -1145,6 +1504,11 @@ const App: React.FC = () => {
                                   });
                                 }}
                               />
+                              {getLintIssuesForTarget(answerTarget(age)).length > 0 && (
+                                <span className="form__hint form__hint--error">
+                                  {formatLintMessage(getLintIssuesForTarget(answerTarget(age))[0])}
+                                </span>
+                              )}
                             </label>
                           ))}
                         </div>
@@ -1226,77 +1590,106 @@ const App: React.FC = () => {
                             <p className="form__empty">No mentions</p>
                           ) : (
                             <div className="grid">
-                              {step.mentions.map((row) => (
-                                <div key={row.id} className="grid__row">
-                                  <input
-                                    placeholder="Term"
-                                    value={row.term}
-                                    onChange={(event) => {
-                                      setChainDraft({
-                                        ...chainDraft,
-                                        steps: chainDraft.steps.map((item) =>
-                                          item.id === step.id
-                                            ? {
-                                                ...item,
-                                                mentions: item.mentions.map((mention) =>
-                                                  mention.id === row.id
-                                                    ? { ...mention, term: event.target.value }
-                                                    : mention
-                                                )
-                                              }
-                                            : item
-                                        )
-                                      });
-                                    }}
-                                  />
-                                  <input
-                                    list="node-ids"
-                                    placeholder="Target node id"
-                                    value={row.targetId}
-                                    onChange={(event) => {
-                                      setChainDraft({
-                                        ...chainDraft,
-                                        steps: chainDraft.steps.map((item) =>
-                                          item.id === step.id
-                                            ? {
-                                                ...item,
-                                                mentions: item.mentions.map((mention) =>
-                                                  mention.id === row.id
-                                                    ? {
-                                                        ...mention,
-                                                        targetId: event.target.value
-                                                      }
-                                                    : mention
-                                                )
-                                              }
-                                            : item
-                                        )
-                                      });
-                                    }}
-                                  />
-                                  <button
-                                    type="button"
-                                    className="button button--ghost"
-                                    onClick={() =>
-                                      setChainDraft({
-                                        ...chainDraft,
-                                        steps: chainDraft.steps.map((item) =>
-                                          item.id === step.id
-                                            ? {
-                                                ...item,
-                                                mentions: item.mentions.filter(
-                                                  (mention) => mention.id !== row.id
-                                                )
-                                              }
-                                            : item
-                                        )
-                                      })
-                                    }
-                                  >
-                                    Remove
-                                  </button>
-                                </div>
-                              ))}
+                              {step.mentions.map((row) => {
+                                const mentionPath = row.term
+                                  ? buildChainMentionPath(index, row.term)
+                                  : "";
+                                const mentionTarget = buildLintTargetKey(
+                                  "chain",
+                                  chainDraft.id,
+                                  mentionPath
+                                );
+                                const mentionIssues = mentionPath
+                                  ? getLintIssuesForTarget(mentionTarget)
+                                  : [];
+                                return (
+                                  <React.Fragment key={row.id}>
+                                    <div className="grid__row">
+                                      <input
+                                        placeholder="Term"
+                                        value={row.term}
+                                        className={classNames(
+                                          mentionIssues.length > 0 && "input--error",
+                                          lintFocusTarget === mentionTarget && "input--lint-focus"
+                                        )}
+                                        onChange={(event) => {
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    mentions: item.mentions.map((mention) =>
+                                                      mention.id === row.id
+                                                        ? { ...mention, term: event.target.value }
+                                                        : mention
+                                                    )
+                                                  }
+                                                : item
+                                            )
+                                          });
+                                        }}
+                                      />
+                                      <input
+                                        list="node-ids"
+                                        placeholder="Target node id"
+                                        value={row.targetId}
+                                        data-lint-target={mentionPath ? mentionTarget : undefined}
+                                        className={classNames(
+                                          mentionIssues.length > 0 && "input--error",
+                                          lintFocusTarget === mentionTarget && "input--lint-focus"
+                                        )}
+                                        onChange={(event) => {
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    mentions: item.mentions.map((mention) =>
+                                                      mention.id === row.id
+                                                        ? {
+                                                            ...mention,
+                                                            targetId: event.target.value
+                                                          }
+                                                        : mention
+                                                    )
+                                                  }
+                                                : item
+                                            )
+                                          });
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        className="button button--ghost"
+                                        onClick={() =>
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    mentions: item.mentions.filter(
+                                                      (mention) => mention.id !== row.id
+                                                    )
+                                                  }
+                                                : item
+                                            )
+                                          })
+                                        }
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                    {mentionIssues.length > 0 && (
+                                      <span className="form__hint form__hint--error">
+                                        {formatLintMessage(mentionIssues[0])}
+                                      </span>
+                                    )}
+                                  </React.Fragment>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -1312,13 +1705,66 @@ const App: React.FC = () => {
 
         <aside className="studio__panel studio__panel--lint">
           <div className="panel__header">
-            <h2>Content lint</h2>
+            <h2>Lint Results</h2>
             <button type="button" className="button" onClick={handleLint}>
               Run content lint
             </button>
           </div>
+          <div className="lint__summary">
+            <span className="lint__badge lint__badge--error">
+              Errors {lintResult.errors.length}
+            </span>
+            <span className="lint__badge lint__badge--warn">
+              Warnings {lintResult.warnings.length}
+            </span>
+          </div>
           <p className="panel__status">{lintStatus}</p>
-          <pre className="panel__output">{lintOutput}</pre>
+          {lintNeedsBuild && (
+            <div className="lint__build">
+              <p className="form__hint form__hint--error">
+                Content linter 未构建。请先执行 `pnpm -r build`，或点击按钮构建。
+              </p>
+              <button type="button" className="button button--ghost" onClick={handleBuildLinter}>
+                Build linter
+              </button>
+            </div>
+          )}
+          {lintIssues.length === 0 ? (
+            <p className="form__empty">No lint issues.</p>
+          ) : (
+            <div className="lint__list">
+              {lintIssues.map((issue, index) => {
+                const scope = issue.nodeId
+                  ? `node:${issue.nodeId}`
+                  : issue.chainId
+                    ? `chain:${issue.chainId}`
+                    : "content";
+                const key = `${issue.code}-${issue.path ?? ""}-${index}`;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    className={classNames(
+                      "lint__item",
+                      issue.level === "error" ? "lint__item--error" : "lint__item--warn"
+                    )}
+                    onClick={() => handleLintIssueClick(issue)}
+                  >
+                    <div className="lint__item-header">
+                      <strong>{scope}</strong>
+                      {issue.path && <span>{issue.path}</span>}
+                    </div>
+                    <span className="lint__item-message">{formatLintMessage(issue)}</span>
+                    {issue.suggestions && issue.suggestions.length > 0 && (
+                      <span className="lint__item-suggestions">
+                        suggest: {issue.suggestions.join(", ")}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </aside>
       </main>
 

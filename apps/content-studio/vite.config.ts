@@ -91,13 +91,41 @@ const jsonApi = (): Plugin => ({
       }
 
       try {
+        const url = new URL(req.url ?? "", "http://localhost");
+        const format = url.searchParams.get("format") === "json" ? "json" : "text";
+        const distPath = path.join(repoRoot, "packages", "content-linter", "dist", "cli.js");
+        try {
+          await fs.access(distPath);
+        } catch {
+          res.statusCode = 409;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              ok: false,
+              missingDist: true,
+              error: "Content linter dist not found. Run pnpm -r build once."
+            })
+          );
+          return;
+        }
+
         const output = await new Promise<{ stdout: string; stderr: string; code: number }>(
           (resolve) => {
-            const child = spawn(process.execPath, [
-              path.join(repoRoot, "packages", "content-linter", "dist", "cli.js"),
-              nodesPath,
-              chainsPath
-            ]);
+            const child = spawn(
+              "pnpm",
+              [
+                "-s",
+                "--filter",
+                "@lxp/content-linter",
+                "lint",
+                "--",
+                "--format",
+                format,
+                nodesPath,
+                chainsPath
+              ],
+              { cwd: repoRoot }
+            );
             let stdout = "";
             let stderr = "";
             child.stdout.on("data", (chunk) => {
@@ -113,7 +141,44 @@ const jsonApi = (): Plugin => ({
         );
 
         res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify(output));
+        res.end(JSON.stringify({ ok: true, format, ...output }));
+      } catch (error) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: String(error) }));
+      }
+    });
+
+    server.middlewares.use("/api/lint/build", async (req, res) => {
+      if (req.method !== "POST") {
+        res.statusCode = 405;
+        res.end("Method not allowed");
+        return;
+      }
+
+      try {
+        const output = await new Promise<{ stdout: string; stderr: string; code: number }>(
+          (resolve) => {
+            const child = spawn(
+              "pnpm",
+              ["--filter", "@lxp/content-linter", "build"],
+              { cwd: repoRoot }
+            );
+            let stdout = "";
+            let stderr = "";
+            child.stdout.on("data", (chunk) => {
+              stdout += String(chunk);
+            });
+            child.stderr.on("data", (chunk) => {
+              stderr += String(chunk);
+            });
+            child.on("close", (code) => {
+              resolve({ stdout, stderr, code: code ?? 0 });
+            });
+          }
+        );
+
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ ok: true, ...output }));
       } catch (error) {
         res.statusCode = 500;
         res.end(JSON.stringify({ error: String(error) }));
