@@ -38,3 +38,16 @@ The web demo syncs the card stack to the URL query string. Share a path by copyi
 - Example: `http://localhost:5173/?stack=plant_cell,protoplast,bacteria`
 
 When someone opens the link, the demo will restore the same stack.
+
+## Where to contribute
+
+- New to the project? Start here:
+  - [Good first issues](https://github.com/learning-experience-engine/core-platform/issues)
+- Want to improve UX?
+  - GraphMini / RelationDock / QuestionChainPanel in `packages/renderer-web` and `apps/web-demo`
+- Want to work on platform core?
+  - State machines in `packages/core`
+- Want to help content?
+  - Add nodes/chains under `content/examples` (run `pnpm lint:content`)
+- Want to propose architecture?
+  - Use `docs/rfc` and GitHub Discussions (RFC category)
