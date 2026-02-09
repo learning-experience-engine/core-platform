@@ -6,6 +6,8 @@
 - Demo walkthrough and in-app demo presets added.
 - Content contribution templates and guide added; PR template updated.
 - Second domain dataset (weather) and question chain added.
+- Content Studio: New Chain now seeds a default 5-step template.
+- Content: added `sun_tan_uv` chain (mentions in steps 1/2/3).
 - UI polish for labels, a11y focus states, and chain exit.
 - Dev diagnostics for missing links; neighborhood truncation hint.
 
