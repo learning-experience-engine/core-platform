@@ -11,11 +11,13 @@
     "dev": "pnpm --filter web-demo dev",
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
+    "lint:content": "pnpm --filter @lxp/content-linter build && node packages/content-linter/dist/cli.js",
     "typecheck": "tsc -b",
     "test": "vitest run"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@types/node": "^22.10.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@typescript-eslint/eslint-plugin": "^8.24.0",

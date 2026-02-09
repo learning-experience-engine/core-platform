@@ -3,6 +3,7 @@
   "references": [
     { "path": "./packages/schema" },
     { "path": "./packages/core" },
+    { "path": "./packages/content-linter" },
     { "path": "./packages/graph" },
     { "path": "./packages/renderer-web" },
     { "path": "./apps/web-demo" }

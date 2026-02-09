@@ -5,7 +5,8 @@ export default defineConfig({
     environment: "node",
     include: [
       "packages/core/src/**/*.test.ts",
-      "packages/graph/src/**/*.test.ts"
+      "packages/graph/src/**/*.test.ts",
+      "packages/content-linter/src/**/*.test.ts"
     ]
   }
 });
