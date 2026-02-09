@@ -1,6 +1,6 @@
-import { loadExamples } from "@lxp/core";
+import { DEFAULT_ROOT_ID, loadExamples } from "@lxp/core";
 
-const DEFAULT_STACK = ["plant_cell"];
+const DEFAULT_STACK = [DEFAULT_ROOT_ID];
 
 const compressConsecutive = (ids: string[]): string[] => {
   const result: string[] = [];

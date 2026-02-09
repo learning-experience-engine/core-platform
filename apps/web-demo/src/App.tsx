@@ -2,10 +2,13 @@ import { useEffect, useMemo, useReducer, useRef, type ReactElement } from "react
 import {
   getNodeById,
   loadExamples,
-  pushCard,
-  goToBreadcrumb,
   reduceCardStack,
   setStack,
+  push,
+  getTop,
+  getPrev,
+  getBreadcrumb,
+  DEFAULT_ROOT_ID,
   type Node,
   type CardStackState
 } from "@lxp/core";
@@ -24,18 +27,18 @@ export const App = (): ReactElement => {
   );
   const lastSearchRef = useRef<string>("");
 
-  const current = getNodeById(state.stack[state.stack.length - 1], nodes);
-  const previous =
-    state.stack.length >= 2
-      ? getNodeById(state.stack[state.stack.length - 2], nodes)
-      : current;
+  const currentId = getTop(state) ?? DEFAULT_ROOT_ID;
+  const prevId = getPrev(state) ?? currentId;
+  const current = getNodeById(currentId, nodes);
+  const previous = getNodeById(prevId, nodes);
+  const breadcrumb = getBreadcrumb(state);
 
   const handleMentionClick = (nodeId: string) => {
-    dispatch(pushCard(nodeId));
+    dispatch(push(nodeId));
   };
 
   const handleBreadcrumbClick = (index: number) => {
-    dispatch(goToBreadcrumb(index));
+    dispatch(setStack(breadcrumb.slice(0, index + 1)));
   };
 
   useEffect(() => {
@@ -64,9 +67,9 @@ export const App = (): ReactElement => {
       <header className="app__header">
         <h1>Learning Experience Engine</h1>
         <nav className="breadcrumb">
-          {state.stack.map((id, index) => {
+          {breadcrumb.map((id, index) => {
             const node = getNodeById(id, nodes);
-            const isLast = index === state.stack.length - 1;
+            const isLast = index === breadcrumb.length - 1;
             return (
               <button
                 key={`${id}-${index}`}
@@ -95,7 +98,7 @@ export const App = (): ReactElement => {
           )}
         </section>
         <section className="column">
-          {state.stack.length >= 2 && current ? (
+          {breadcrumb.length >= 2 && current ? (
             <NodeCard
               node={current}
               onMentionClick={handleMentionClick}

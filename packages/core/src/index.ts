@@ -1,12 +1,16 @@
 export { loadExamples, getNodeById } from "./examples";
 export {
+  DEFAULT_ROOT_ID,
   reduceCardStack,
-  pushCard,
-  popCard,
-  resetStack,
-  goToBreadcrumb,
   setStack,
+  push,
+  pop,
+  reset,
+  getTop,
+  getPrev,
+  getBreadcrumb,
+  type NodeId,
   type CardStackState,
   type CardStackAction
-} from "./card-stack";
+} from "./cardStack";
 export type { Node, Relation, RelationType, Facet } from "@lxp/schema";
