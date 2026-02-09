@@ -180,5 +180,157 @@
       { "type": "related", "facet": "practice", "to": "air_pressure", "label": "预警监测" },
       { "type": "compare_with", "facet": "compare", "to": "wind", "label": "强度差异" }
     ]
+  },
+  {
+    "id": "skin",
+    "title": "皮肤",
+    "body": "皮肤是人体最大的器官，承担屏障与感知功能。\n外层[表皮]阻挡外界刺激，中层[真皮]提供支撑。\n深层[皮下组织]保温缓冲，并与[汗腺]、[皮脂腺]协作。",
+    "mentions": {
+      "表皮": "epidermis",
+      "真皮": "dermis",
+      "皮下组织": "hypodermis",
+      "汗腺": "sweat_gland",
+      "皮脂腺": "sebaceous_gland"
+    },
+    "relations": [
+      { "type": "has_part", "facet": "what", "to": "epidermis", "label": "表皮" },
+      { "type": "has_part", "facet": "what", "to": "dermis", "label": "真皮" },
+      { "type": "has_part", "facet": "what", "to": "hypodermis", "label": "皮下组织" },
+      { "type": "related", "facet": "how", "to": "keratinocyte", "label": "角质化更新" },
+      { "type": "related", "facet": "in_life", "to": "sweat_gland", "label": "出汗调温" },
+      { "type": "related", "facet": "practice", "to": "sebaceous_gland", "label": "清洁控油" },
+      { "type": "compare_with", "facet": "compare", "to": "membrane", "label": "屏障对比" }
+    ]
+  },
+  {
+    "id": "epidermis",
+    "title": "表皮",
+    "body": "表皮位于皮肤最外层，细胞更新快。\n主要细胞是[角质形成细胞]，负责角质化形成屏障。\n[黑色素]分布其中，帮助抵御紫外线。",
+    "mentions": {
+      "角质形成细胞": "keratinocyte",
+      "黑色素": "melanin"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤外层" },
+      { "type": "has_part", "facet": "what", "to": "keratinocyte", "label": "主要细胞" },
+      { "type": "related", "facet": "how", "to": "melanin", "label": "色素分布" },
+      { "type": "related", "facet": "in_life", "to": "skin_microbiome", "label": "表面生态" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "防晒修复" },
+      { "type": "compare_with", "facet": "compare", "to": "dermis", "label": "层次对比" }
+    ]
+  },
+  {
+    "id": "dermis",
+    "title": "真皮",
+    "body": "真皮位于表皮下方，含有结缔组织与丰富结构。\n[汗腺]与[皮脂腺]多位于此层，负责分泌。\n它与[皮下组织]共同提供弹性与缓冲。",
+    "mentions": {
+      "汗腺": "sweat_gland",
+      "皮脂腺": "sebaceous_gland",
+      "皮下组织": "hypodermis"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤中层" },
+      { "type": "has_part", "facet": "what", "to": "sweat_gland", "label": "汗腺" },
+      { "type": "has_part", "facet": "what", "to": "sebaceous_gland", "label": "皮脂腺" },
+      { "type": "related", "facet": "how", "to": "hypodermis", "label": "支撑连接" },
+      { "type": "related", "facet": "in_life", "to": "sweat_gland", "label": "排汗通道" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "按摩护理" },
+      { "type": "compare_with", "facet": "compare", "to": "epidermis", "label": "结构对比" }
+    ]
+  },
+  {
+    "id": "hypodermis",
+    "title": "皮下组织",
+    "body": "皮下组织是皮肤的深层，脂肪较多。\n它连接[真皮]与身体其他结构，提供缓冲与保温。\n生活中体感冷热、碰撞保护都与[皮下组织]相关。",
+    "mentions": {
+      "真皮": "dermis",
+      "皮下组织": "hypodermis"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤深层" },
+      { "type": "related", "facet": "how", "to": "dermis", "label": "连接支撑" },
+      { "type": "related", "facet": "in_life", "to": "skin", "label": "保温储能" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "体重管理" },
+      { "type": "compare_with", "facet": "compare", "to": "dermis", "label": "脂肪层对比" }
+    ]
+  },
+  {
+    "id": "keratinocyte",
+    "title": "角质形成细胞",
+    "body": "角质形成细胞是表皮最常见的细胞类型。\n它通过角质化形成保护层，并与[黑色素]分布有关。\n日常保湿与修复会影响[表皮]更新。",
+    "mentions": {
+      "黑色素": "melanin",
+      "表皮": "epidermis"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "epidermis", "label": "表皮细胞" },
+      { "type": "related", "facet": "how", "to": "melanin", "label": "色素吸收" },
+      { "type": "related", "facet": "in_life", "to": "skin", "label": "角质更新" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "保湿修复" },
+      { "type": "compare_with", "facet": "compare", "to": "sebaceous_gland", "label": "细胞与腺体对比" }
+    ]
+  },
+  {
+    "id": "melanin",
+    "title": "黑色素",
+    "body": "黑色素是皮肤中的色素，主要分布在[角质形成细胞]内。\n它能吸收紫外线，减少光损伤。\n防晒习惯与[表皮]中的黑色素变化有关。",
+    "mentions": {
+      "角质形成细胞": "keratinocyte",
+      "表皮": "epidermis"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "epidermis", "label": "表皮色素" },
+      { "type": "related", "facet": "how", "to": "keratinocyte", "label": "合成转运" },
+      { "type": "related", "facet": "in_life", "to": "skin", "label": "防晒作用" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "防晒护肤" },
+      { "type": "compare_with", "facet": "compare", "to": "keratinocyte", "label": "色素与细胞对比" }
+    ]
+  },
+  {
+    "id": "sweat_gland",
+    "title": "汗腺",
+    "body": "汗腺负责分泌汗液，帮助散热。\n它主要位于[真皮]，通过导管通向[表皮]表面。\n运动出汗与体温调节都依赖汗腺。",
+    "mentions": {
+      "真皮": "dermis",
+      "表皮": "epidermis"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "dermis", "label": "真皮结构" },
+      { "type": "related", "facet": "how", "to": "skin", "label": "排汗散热" },
+      { "type": "related", "facet": "in_life", "to": "skin", "label": "运动出汗" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "补水降温" },
+      { "type": "compare_with", "facet": "compare", "to": "sebaceous_gland", "label": "分泌物对比" }
+    ]
+  },
+  {
+    "id": "sebaceous_gland",
+    "title": "皮脂腺",
+    "body": "皮脂腺分泌皮脂，润滑皮肤与毛发。\n它位于[真皮]，分泌物会影响[皮肤微生物群]环境。\n清洁与控油习惯直接作用于皮脂腺。",
+    "mentions": {
+      "真皮": "dermis",
+      "皮肤微生物群": "skin_microbiome"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "dermis", "label": "真皮结构" },
+      { "type": "related", "facet": "how", "to": "skin", "label": "分泌皮脂" },
+      { "type": "related", "facet": "in_life", "to": "skin_microbiome", "label": "油脂环境" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "清洁控油" },
+      { "type": "compare_with", "facet": "compare", "to": "sweat_gland", "label": "分泌对比" }
+    ]
+  },
+  {
+    "id": "skin_microbiome",
+    "title": "皮肤微生物群",
+    "body": "皮肤微生物群是皮肤表面的微生物集合。\n它受[皮脂腺]分泌与皮肤环境影响。\n适度清洁与保湿有助维持微生物平衡。",
+    "mentions": {
+      "皮脂腺": "sebaceous_gland"
+    },
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "skin", "label": "皮肤表面生态" },
+      { "type": "related", "facet": "how", "to": "sebaceous_gland", "label": "油脂供养" },
+      { "type": "related", "facet": "in_life", "to": "skin", "label": "健康与异味" },
+      { "type": "related", "facet": "practice", "to": "skin", "label": "温和清洁" },
+      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "微生物类型对比" }
+    ]
   }
 ]
