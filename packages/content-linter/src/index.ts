@@ -1,4 +1,4 @@
-import type { Node, Relation } from "@lxp/schema";
+import type { Node, QuestionChain, Relation } from "@lxp/schema";
 
 const RELATION_TYPES = ["part_of", "has_part", "compare_with", "related"] as const;
 const RELATION_FACETS = ["what", "how", "in_life", "compare", "practice"] as const;
@@ -77,6 +77,61 @@ export const lintNodes = (nodes: Node[]): LintResult => {
         });
       }
     }
+  }
+
+  return { errors, warnings };
+};
+
+export const lintChains = (chains: QuestionChain[], nodes: Node[]): LintResult => {
+  const errors: LintMessage[] = [];
+  const warnings: LintMessage[] = [];
+  const nodesById = new Set(nodes.map((node) => node.id));
+  const chainIds = new Set<string>();
+
+  for (const chain of chains) {
+    if (chainIds.has(chain.id)) {
+      errors.push({
+        level: "error",
+        message: `[ERROR] chain=${chain.id} duplicate id`
+      });
+      continue;
+    }
+    chainIds.add(chain.id);
+
+    if (!nodesById.has(chain.topicNodeId)) {
+      errors.push({
+        level: "error",
+        message: `[ERROR] chain=${chain.id} topicNodeId=${chain.topicNodeId} not found`
+      });
+    }
+
+    if (!chain.steps || chain.steps.length === 0) {
+      errors.push({
+        level: "error",
+        message: `[ERROR] chain=${chain.id} has 0 steps`
+      });
+      continue;
+    }
+
+    chain.steps.forEach((step, index) => {
+      const answers = step.answers ?? ({} as Record<string, string>);
+      if (!("child" in answers) || !("adult" in answers)) {
+        errors.push({
+          level: "error",
+          message: `[ERROR] chain=${chain.id} step[${index}] missing child/adult answers`
+        });
+      }
+
+      const mentions = step.mentions ?? {};
+      for (const [term, targetId] of Object.entries(mentions)) {
+        if (!nodesById.has(targetId)) {
+          errors.push({
+            level: "error",
+            message: `[ERROR] chain=${chain.id} step[${index}] mention term=\"${term}\" -> nodeId=\"${targetId}\" not found`
+          });
+        }
+      }
+    });
   }
 
   return { errors, warnings };

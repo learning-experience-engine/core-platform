@@ -1,5 +1,5 @@
-import type { NodeId } from "@lxp/core";
-import type { Facet, Node, RelationType } from "@lxp/schema";
+import type { NodeId, QuestionChainAction, QuestionChainState } from "@lxp/core";
+import type { AgeBand, ChainStep, Facet, Node, QuestionChain, RelationType } from "@lxp/schema";
 import { groupRelationsByFacet, type RelationView } from "@lxp/core";
 import { getNeighborhood, type NeighborhoodFacet } from "@lxp/graph";
 import React from "react";
@@ -12,6 +12,15 @@ export type NodeCardProps = {
   onNodeClick?: (nodeId: string) => void;
   onNavigate?: (nodeId: string) => void;
   neighborhood?: React.ReactNode;
+  onStartChain?: () => void;
+  hasChain?: boolean;
+};
+
+export type QuestionChainPanelProps = {
+  chain: QuestionChain;
+  state: QuestionChainState;
+  dispatch: (action: QuestionChainAction) => void;
+  onMentionNavigate?: (nodeId: string) => void;
 };
 
 type RelationDockProps = {
@@ -268,6 +277,38 @@ const renderBody = (
   return parts;
 };
 
+const renderMentions = (
+  text: string,
+  mentions: Record<string, string> | undefined,
+  onMentionClick?: (nodeId: string) => void
+): React.ReactNode[] => {
+  if (!mentions || Object.keys(mentions).length === 0) {
+    return [text];
+  }
+
+  const terms = Object.keys(mentions).sort((a, b) => b.length - a.length);
+  const escaped = terms.map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const regex = new RegExp(`(${escaped.join("|")})`, "g");
+  const parts = text.split(regex).filter(Boolean);
+
+  return parts.map((part, index) => {
+    const targetId = mentions[part];
+    if (targetId && onMentionClick) {
+      return (
+        <button
+          key={`${part}-${index}`}
+          type="button"
+          className="mention"
+          onClick={() => onMentionClick(targetId)}
+        >
+          {part}
+        </button>
+      );
+    }
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+};
+
 export const NodeCard: React.FC<NodeCardProps> = ({
   node,
   nodesById,
@@ -275,7 +316,9 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   onRelationClick,
   onNodeClick,
   onNavigate,
-  neighborhood
+  neighborhood,
+  onStartChain,
+  hasChain
 }) => {
   const handleNavigate = onNavigate ?? onRelationClick ?? onNodeClick;
 
@@ -286,6 +329,13 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       </header>
       <p className="node-card__body">{renderBody(node.body, node.mentions, onMentionClick)}</p>
       <footer className="node-card__footer">
+        {hasChain ? (
+          <div className="node-card__chain">
+            <button type="button" className="chain-start" onClick={onStartChain}>
+              Start Question Chain
+            </button>
+          </div>
+        ) : null}
         <div className="node-card__relations">
           <h3>Relations</h3>
           <RelationDock node={node} nodesById={nodesById} onNavigate={handleNavigate} />
@@ -298,5 +348,88 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         ) : null}
       </footer>
     </article>
+  );
+};
+
+const getStep = (chain: QuestionChain, index: number): ChainStep | undefined => {
+  if (!chain.steps.length) return undefined;
+  if (index < 0) return chain.steps[0];
+  if (index >= chain.steps.length) return chain.steps[chain.steps.length - 1];
+  return chain.steps[index];
+};
+
+const AGE_LABELS: Record<AgeBand, string> = {
+  child: "Child",
+  adult: "Adult"
+};
+
+export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
+  chain,
+  state,
+  dispatch,
+  onMentionNavigate
+}) => {
+  const total = chain.steps.length;
+  const currentIndex = total === 0 ? 0 : Math.min(Math.max(state.stepIndex, 0), total - 1);
+  const step = getStep(chain, currentIndex);
+  const isFirst = currentIndex <= 0;
+  const isLast = currentIndex >= total - 1;
+
+  if (!step) {
+    return (
+      <section className="question-chain">
+        <div className="question-chain__empty">No steps in chain.</div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="question-chain">
+      <header className="question-chain__header">
+        <div>
+          <p className="question-chain__kicker">Question Chain</p>
+          <h3>{chain.title}</h3>
+        </div>
+        <div className="question-chain__ages" role="group" aria-label="Age switch">
+          {(Object.keys(AGE_LABELS) as AgeBand[]).map((age) => (
+            <button
+              key={age}
+              type="button"
+              className={`question-chain__age${state.age === age ? " is-active" : ""}`}
+              onClick={() => dispatch({ type: "SET_AGE", age })}
+            >
+              {AGE_LABELS[age]}
+            </button>
+          ))}
+        </div>
+      </header>
+      <div className="question-chain__body">
+        <h4>{step.question}</h4>
+        <p>{renderMentions(step.answers[state.age], step.mentions, onMentionNavigate)}</p>
+      </div>
+      <footer className="question-chain__footer">
+        <div className="question-chain__controls">
+          <button
+            type="button"
+            className="question-chain__nav"
+            onClick={() => dispatch({ type: "PREV" })}
+            disabled={isFirst}
+          >
+            Prev
+          </button>
+          <button
+            type="button"
+            className="question-chain__nav"
+            onClick={() => dispatch({ type: "NEXT" })}
+            disabled={isLast}
+          >
+            Next
+          </button>
+        </div>
+        <div className="question-chain__indicator">
+          {currentIndex + 1}/{total}
+        </div>
+      </footer>
+    </section>
   );
 };

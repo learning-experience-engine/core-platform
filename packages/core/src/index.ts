@@ -1,4 +1,4 @@
-export { loadExamples, getNodeById } from "./examples";
+export { loadExamples, loadExampleChains, getNodeById } from "./examples";
 export { groupRelationsByFacet, type RelationView } from "./relations";
 export {
   DEFAULT_ROOT_ID,
@@ -14,4 +14,17 @@ export {
   type CardStackState,
   type CardStackAction
 } from "./cardStack";
-export type { Node, Relation, RelationType, Facet } from "@lxp/schema";
+export {
+  createQuestionChainState,
+  reduceQuestionChain,
+  setChain,
+  setStep,
+  nextStep,
+  prevStep,
+  setAge,
+  exitChain,
+  type QuestionChainState,
+  type QuestionChainAction,
+  type QuestionChainContext
+} from "./questionChain";
+export type { Node, Relation, RelationType, Facet, AgeBand, QuestionChain, ChainStep } from "@lxp/schema";

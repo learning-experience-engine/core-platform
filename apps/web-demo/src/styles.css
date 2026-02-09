@@ -196,6 +196,123 @@ body {
   gap: 20px;
 }
 
+.node-card__chain {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.chain-start {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.question-chain {
+  margin-top: 20px;
+  background: var(--bg-card);
+  border-radius: 22px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 16px;
+}
+
+.question-chain__header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.question-chain__kicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.question-chain__header h3 {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+}
+
+.question-chain__ages {
+  display: flex;
+  gap: 6px;
+}
+
+.question-chain__age {
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.question-chain__age.is-active {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.question-chain__body h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+}
+
+.question-chain__body p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.question-chain__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.question-chain__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.question-chain__nav {
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.question-chain__nav:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.question-chain__indicator {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.question-chain__empty {
+  font-size: 13px;
+  color: var(--muted);
+}
+
 .node-card__graph h3 {
   font-size: 12px;
   letter-spacing: 0.08em;
