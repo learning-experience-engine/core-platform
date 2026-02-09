@@ -1,4 +1,5 @@
 export { loadExamples, getNodeById } from "./examples";
+export { groupRelationsByFacet, type RelationView } from "./relations";
 export {
   DEFAULT_ROOT_ID,
   reduceCardStack,

@@ -20,7 +20,7 @@ const buildAdjacency = (list: Node[]) => {
   list.forEach((node) => {
     const edges = node.relations.map((relation) => ({
       sourceId: node.id,
-      targetId: relation.targetId,
+      targetId: relation.to,
       relation
     }));
     adjacency.set(node.id, edges);

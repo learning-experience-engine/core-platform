@@ -20,6 +20,10 @@ const getTitle = (node: Node | undefined): string => node?.title ?? "Unknown";
 
 export const App = (): ReactElement => {
   const nodes = useMemo(() => loadExamples(), []);
+  const nodesById = useMemo(
+    () => Object.fromEntries(nodes.map((node) => [node.id, node])),
+    [nodes]
+  );
   const [state, dispatch] = useReducer(
     reduceCardStack,
     { stack: ["plant_cell"] } satisfies CardStackState,
@@ -89,9 +93,11 @@ export const App = (): ReactElement => {
           {previous ? (
             <NodeCard
               node={previous}
+              nodesById={nodesById}
               onMentionClick={handleMentionClick}
               onRelationClick={handleMentionClick}
               onNodeClick={handleMentionClick}
+              onNavigate={handleMentionClick}
             />
           ) : (
             <div className="empty">No node</div>
@@ -101,9 +107,11 @@ export const App = (): ReactElement => {
           {breadcrumb.length >= 2 && current ? (
             <NodeCard
               node={current}
+              nodesById={nodesById}
               onMentionClick={handleMentionClick}
               onRelationClick={handleMentionClick}
               onNodeClick={handleMentionClick}
+              onNavigate={handleMentionClick}
             />
           ) : (
             <div className="empty">点击左侧术语以展开</div>

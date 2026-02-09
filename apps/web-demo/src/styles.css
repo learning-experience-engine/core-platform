@@ -138,12 +138,34 @@ body {
   gap: 16px;
 }
 
-.relation-dock__facet h4 {
-  margin: 0 0 6px;
-  font-size: 14px;
+.relation-dock__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.relation-dock__type h5 {
+.relation-dock__tab {
+  border: 1px solid var(--border);
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.relation-dock__tab.is-active {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.relation-dock__list {
+  display: grid;
+  gap: 12px;
+}
+
+.relation-dock__group h5 {
   margin: 0 0 6px;
   font-size: 12px;
   text-transform: uppercase;
@@ -151,7 +173,7 @@ body {
   color: var(--muted);
 }
 
-.relation-dock__type ul {
+.relation-dock__group ul {
   list-style: none;
   margin: 0;
   padding: 0;

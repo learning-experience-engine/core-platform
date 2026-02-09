@@ -1,17 +1,21 @@
-import type { Facet, Node, Relation, RelationType } from "@lxp/schema";
+import type { Facet, Node, RelationType } from "@lxp/schema";
+import { groupRelationsByFacet, type RelationView } from "@lxp/core";
 import { getNeighborhood, type GraphEdge, type Neighborhood } from "@lxp/graph";
 import React from "react";
 
 export type NodeCardProps = {
   node: Node;
+  nodesById: Record<string, Node>;
   onMentionClick?: (nodeId: string) => void;
   onRelationClick?: (nodeId: string) => void;
   onNodeClick?: (nodeId: string) => void;
+  onNavigate?: (nodeId: string) => void;
 };
 
 type RelationDockProps = {
-  relations: Relation[];
-  onRelationClick?: (nodeId: string) => void;
+  node: Node;
+  nodesById: Record<string, Node>;
+  onNavigate?: (nodeId: string) => void;
 };
 
 type GraphMiniProps = {
@@ -21,14 +25,21 @@ type GraphMiniProps = {
 };
 
 const FACETS: Facet[] = ["what", "how", "in_life", "compare", "practice"];
-const RELATION_TYPES: RelationType[] = ["part_of", "compare_with", "related"];
+const RELATION_TYPES: RelationType[] = ["part_of", "has_part", "compare_with", "related"];
 
 const FACET_LABELS: Record<Facet, string> = {
-  what: "What",
-  how: "How",
-  in_life: "In Life",
-  compare: "Compare",
-  practice: "Practice"
+  what: "是什么",
+  how: "怎么实现",
+  in_life: "生活体现",
+  compare: "差异对比",
+  practice: "动手实践"
+};
+
+const TYPE_LABELS: Record<RelationType, string> = {
+  part_of: "结构",
+  has_part: "结构",
+  compare_with: "对比",
+  related: "关联"
 };
 
 const isDev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? false;
@@ -38,27 +49,7 @@ const getEdgeLabel = (edge: GraphEdge) => `${edge.relation.type}:${edge.targetId
 const buildNeighbors = (neighborhood: Neighborhood, sourceId: string) =>
   neighborhood.nodes.filter((node) => node.id !== sourceId);
 
-const groupRelations = (relations: Relation[]) => {
-  const grouped = new Map<Facet, Map<RelationType, Relation[]>>();
-
-  relations.forEach((rel) => {
-    const facet = rel.facet;
-    const type = rel.type;
-    if (!grouped.has(facet)) {
-      grouped.set(facet, new Map());
-    }
-    const typeMap = grouped.get(facet);
-    if (!typeMap) return;
-    if (!typeMap.has(type)) {
-      typeMap.set(type, []);
-    }
-    typeMap.get(type)?.push(rel);
-  });
-
-  return grouped;
-};
-
-const warnOnUnknown = (relations: Relation[]) => {
+const warnOnUnknown = (relations: RelationView[]) => {
   if (!isDev) return;
   relations.forEach((rel) => {
     if (!FACETS.includes(rel.facet)) {
@@ -70,39 +61,100 @@ const warnOnUnknown = (relations: Relation[]) => {
   });
 };
 
-export const RelationDock: React.FC<RelationDockProps> = ({ relations, onRelationClick }) => {
-  if (relations.length === 0) {
+const groupByType = (relations: RelationView[]) => {
+  const grouped = new Map<RelationType, RelationView[]>();
+  relations.forEach((relation) => {
+    if (!grouped.has(relation.type)) {
+      grouped.set(relation.type, []);
+    }
+    grouped.get(relation.type)?.push(relation);
+  });
+  return grouped;
+};
+
+export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onNavigate }) => {
+  const grouped = React.useMemo(
+    () => groupRelationsByFacet(node, nodesById),
+    [node, nodesById]
+  );
+
+  const facetsWithContent = React.useMemo(
+    () => FACETS.filter((facet) => grouped[facet].length > 0),
+    [grouped]
+  );
+
+  const [activeFacet, setActiveFacet] = React.useState<Facet>(
+    facetsWithContent[0] ?? FACETS[0]
+  );
+
+  React.useEffect(() => {
+    if (!facetsWithContent.includes(activeFacet)) {
+      setActiveFacet(facetsWithContent[0] ?? FACETS[0]);
+    }
+  }, [activeFacet, facetsWithContent]);
+
+  const activeRelations = grouped[activeFacet];
+  warnOnUnknown(activeRelations);
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key != "ArrowLeft" && event.key != "ArrowRight") return;
+    event.preventDefault();
+    const currentIndex = FACETS.indexOf(activeFacet);
+    const delta = event.key == "ArrowRight" ? 1 : -1;
+    const nextIndex = (currentIndex + delta + FACETS.length) % FACETS.length;
+    setActiveFacet(FACETS[nextIndex]);
+  };
+
+  if (node.relations.length === 0) {
     return <p className="node-card__empty">No relations</p>;
   }
 
-  warnOnUnknown(relations);
-  const grouped = groupRelations(relations);
-
   return (
     <div className="relation-dock">
-      {[...grouped.entries()].map(([facet, typeMap]) => (
-        <section key={facet} className="relation-dock__facet">
-          <h4>{FACET_LABELS[facet] ?? facet}</h4>
-          {[...typeMap.entries()].map(([type, items]) => (
-            <div key={type} className="relation-dock__type">
-              <h5>{type}</h5>
+      <div
+        className="relation-dock__tabs"
+        role="tablist"
+        aria-label="Facet tabs"
+        onKeyDown={handleKeyDown}
+      >
+        {FACETS.map((facet) => (
+          <button
+            key={facet}
+            type="button"
+            role="tab"
+            aria-selected={activeFacet === facet}
+            tabIndex={activeFacet === facet ? 0 : -1}
+            className={`relation-dock__tab${activeFacet === facet ? " is-active" : ""}`}
+            onClick={() => setActiveFacet(facet)}
+          >
+            {FACET_LABELS[facet]}
+          </button>
+        ))}
+      </div>
+      {activeRelations.length === 0 ? (
+        <p className="node-card__empty">No relations</p>
+      ) : (
+        <div className="relation-dock__list">
+          {[...groupByType(activeRelations).entries()].map(([type, items]) => (
+            <div key={type} className="relation-dock__group">
+              <h5>{TYPE_LABELS[type]}</h5>
               <ul>
                 {items.map((rel, index) => (
-                  <li key={`${rel.targetId}-${index}`}>
+                  <li key={`${rel.to}-${index}`}>
                     <button
                       type="button"
                       className="relation-link"
-                      onClick={() => onRelationClick?.(rel.targetId)}
+                      onClick={() => onNavigate?.(rel.to)}
                     >
-                      {rel.targetId}
+                      {rel.label ?? rel.title}
                     </button>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
-        </section>
-      ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -117,7 +169,9 @@ export const GraphMini: React.FC<GraphMiniProps> = ({ nodeId, limit = 8, onNodeC
   );
 
   const neighbors = React.useMemo(() => buildNeighbors(neighborhood, nodeId), [neighborhood, nodeId]);
-  const hasMore = (getNeighborhood(nodeId, facet === "all" ? undefined : facet, Number.MAX_SAFE_INTEGER).edges.length ?? 0) > limit;
+  const hasMore =
+    (getNeighborhood(nodeId, facet === "all" ? undefined : facet, Number.MAX_SAFE_INTEGER)
+      .edges.length ?? 0) > limit;
 
   return (
     <section className="graph-mini" aria-label="Neighborhood graph">
@@ -187,7 +241,9 @@ export const GraphMini: React.FC<GraphMiniProps> = ({ nodeId, limit = 8, onNodeC
       <div className="graph-mini__edges" aria-hidden="true">
         {neighborhood.edges.map((edge) => (
           <span key={getEdgeLabel(edge)} className="graph-mini__edge">
-            {edge.sourceId} → {edge.targetId}
+            {edge.sourceId}
+            {" -> "}
+            {edge.targetId}
           </span>
         ))}
       </div>
@@ -242,10 +298,14 @@ const renderBody = (
 
 export const NodeCard: React.FC<NodeCardProps> = ({
   node,
+  nodesById,
   onMentionClick,
   onRelationClick,
-  onNodeClick
+  onNodeClick,
+  onNavigate
 }) => {
+  const handleNavigate = onNavigate ?? onRelationClick ?? onNodeClick;
+
   return (
     <article className="node-card">
       <header className="node-card__header">
@@ -255,11 +315,11 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       <footer className="node-card__footer">
         <div className="node-card__relations">
           <h3>Relations</h3>
-          <RelationDock relations={node.relations} onRelationClick={onRelationClick} />
+          <RelationDock node={node} nodesById={nodesById} onNavigate={handleNavigate} />
         </div>
         <div className="node-card__graph">
           <h3>Neighborhood</h3>
-          <GraphMini nodeId={node.id} onNodeClick={onNodeClick ?? onRelationClick} />
+          <GraphMini nodeId={node.id} onNodeClick={handleNavigate} />
         </div>
       </footer>
     </article>

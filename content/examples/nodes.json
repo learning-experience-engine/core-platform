@@ -2,13 +2,15 @@
   {
     "id": "plant_cell",
     "title": "植物细胞",
-    "body": "植物细胞具有细胞壁、叶绿体等结构。研究细胞结构时常会用到[原生质体]来观察膜系统。",
+    "body": "植物细胞具有细胞壁、细胞膜、叶绿体等结构。研究细胞结构时常会用到[原生质体]来观察膜系统。",
     "mentions": {
       "原生质体": "protoplast"
     },
     "relations": [
-      { "type": "related", "facet": "what", "targetId": "protoplast" },
-      { "type": "compare_with", "facet": "compare", "targetId": "bacteria" }
+      { "type": "has_part", "facet": "what", "to": "cell_wall", "label": "细胞壁" },
+      { "type": "has_part", "facet": "what", "to": "membrane", "label": "细胞膜" },
+      { "type": "related", "facet": "how", "to": "protoplast", "label": "实验制备" },
+      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "细胞壁对比" }
     ]
   },
   {
@@ -19,9 +21,10 @@
       "细菌": "bacteria"
     },
     "relations": [
-      { "type": "compare_with", "facet": "compare", "targetId": "bacteria" },
-      { "type": "part_of", "facet": "how", "targetId": "plant_cell" },
-      { "type": "related", "facet": "practice", "targetId": "plant_cell" }
+      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "来源" },
+      { "type": "related", "facet": "how", "to": "membrane", "label": "膜系统观察" },
+      { "type": "compare_with", "facet": "compare", "to": "bacteria", "label": "壁结构对比" },
+      { "type": "related", "facet": "practice", "to": "cell_wall", "label": "酶解制备" }
     ]
   },
   {
@@ -30,8 +33,34 @@
     "body": "细菌是原核生物，缺乏细胞核，但具有细胞壁和多样的代谢方式。",
     "mentions": {},
     "relations": [
-      { "type": "related", "facet": "in_life", "targetId": "protoplast" },
-      { "type": "compare_with", "facet": "compare", "targetId": "plant_cell" }
+      { "type": "has_part", "facet": "what", "to": "cell_wall", "label": "细胞壁" },
+      { "type": "compare_with", "facet": "compare", "to": "plant_cell", "label": "细胞结构差异" },
+      { "type": "related", "facet": "in_life", "to": "membrane", "label": "膜上的营养转运" },
+      { "type": "related", "facet": "practice", "to": "protoplast", "label": "实验对照" }
+    ]
+  },
+  {
+    "id": "cell_wall",
+    "title": "细胞壁",
+    "body": "细胞壁为细胞提供机械支撑与保护，在植物与细菌中成分差异明显。",
+    "mentions": {},
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "植物结构" },
+      { "type": "part_of", "facet": "what", "to": "bacteria", "label": "细菌结构" },
+      { "type": "compare_with", "facet": "compare", "to": "membrane", "label": "结构差异" },
+      { "type": "related", "facet": "practice", "to": "protoplast", "label": "酶解处理" }
+    ]
+  },
+  {
+    "id": "membrane",
+    "title": "细胞膜",
+    "body": "细胞膜负责物质交换与信号传递，是理解细胞行为的关键结构。",
+    "mentions": {},
+    "relations": [
+      { "type": "part_of", "facet": "what", "to": "plant_cell", "label": "植物结构" },
+      { "type": "related", "facet": "how", "to": "protoplast", "label": "膜系统观察" },
+      { "type": "related", "facet": "in_life", "to": "bacteria", "label": "营养摄取" },
+      { "type": "compare_with", "facet": "compare", "to": "cell_wall", "label": "差异" }
     ]
   }
 ]

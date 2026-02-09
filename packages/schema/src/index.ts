@@ -1,11 +1,12 @@
-export type RelationType = "part_of" | "compare_with" | "related";
+export type RelationType = "part_of" | "has_part" | "compare_with" | "related";
 
 export type Facet = "what" | "how" | "in_life" | "compare" | "practice";
 
 export type Relation = {
   type: RelationType;
   facet: Facet;
-  targetId: string;
+  to: string;
+  label?: string;
 };
 
 export type Node = {

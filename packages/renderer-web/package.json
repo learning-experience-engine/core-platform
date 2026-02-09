@@ -16,6 +16,7 @@
     "lint": "eslint src --ext .ts,.tsx"
   },
   "dependencies": {
+    "@lxp/core": "workspace:*",
     "@lxp/graph": "workspace:*",
     "@lxp/schema": "workspace:*",
     "react": "^19.0.0"
