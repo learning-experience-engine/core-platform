@@ -75,7 +75,6 @@ export const getNeighborhood = (
     }
   });
 
-  const totalNeighbors = neighborMeta.size;
   let neighborIds = [...neighborMeta.entries()]
     .sort(
       ([, left], [, right]) =>

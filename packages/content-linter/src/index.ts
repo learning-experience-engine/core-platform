@@ -127,7 +127,7 @@ export const lintChains = (chains: QuestionChain[], nodes: Node[]): LintResult =
         if (!nodesById.has(targetId)) {
           errors.push({
             level: "error",
-            message: `[ERROR] chain=${chain.id} step[${index}] mention term=\"${term}\" -> nodeId=\"${targetId}\" not found`
+            message: `[ERROR] chain=${chain.id} step[${index}] mention term="${term}" -> nodeId="${targetId}" not found`
           });
         }
       }
