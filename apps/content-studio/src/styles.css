@@ -237,6 +237,12 @@ select {
   box-shadow: 0 0 0 2px rgba(201, 101, 42, 0.25);
 }
 
+.lint-focus {
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px rgba(201, 101, 42, 0.2);
+  outline: 1px solid rgba(201, 101, 42, 0.12);
+}
+
 textarea {
   resize: vertical;
 }

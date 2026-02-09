@@ -118,6 +118,35 @@ const buildLintTargetKey = (scope: "node" | "chain", id: string, path = ""): str
   return `${scope}:${id}:${encodeURIComponent(path)}`;
 };
 
+const buildLintFallbackPaths = (path: string, topPath: string): string[] => {
+  const next: string[] = [];
+  if (path) {
+    next.push(path);
+  }
+
+  const stepMatch = path.match(/^steps\[(\d+)\](?:\.(.+))?$/);
+  if (stepMatch) {
+    const stepIndex = stepMatch[1];
+    const tail = stepMatch[2] ?? "";
+    if (tail.startsWith("mentions[")) {
+      next.push(`steps[${stepIndex}].mentions`);
+    }
+    next.push(`steps[${stepIndex}]`);
+  }
+
+  const relationMatch = path.match(/^relations\[(\d+)\](?:\.(.+))?$/);
+  if (relationMatch) {
+    next.push(`relations[${relationMatch[1]}]`);
+  }
+
+  if (/^mentions\[/.test(path)) {
+    next.push("mentions");
+  }
+
+  next.push(topPath);
+  return Array.from(new Set(next));
+};
+
 const buildNodeMentionPath = (term: string): string => {
   return `mentions[${JSON.stringify(term)}]`;
 };
@@ -517,6 +546,7 @@ const App: React.FC = () => {
     warnings: []
   });
   const [lintFocusTarget, setLintFocusTarget] = React.useState("");
+  const lintTargetRefs = React.useRef<Map<string, HTMLElement>>(new Map());
   const [nodeErrors, setNodeErrors] = React.useState<string[]>([]);
   const [chainErrors, setChainErrors] = React.useState<string[]>([]);
 
@@ -603,6 +633,34 @@ const App: React.FC = () => {
   const getLintIssuesForTarget = (key: string): LintIssue[] => {
     return lintIssuesByTarget.get(key) ?? [];
   };
+
+  const registerLintTarget = React.useCallback(
+    (key: string) => (node: HTMLElement | null) => {
+      if (!key) return;
+      const map = lintTargetRefs.current;
+      if (node) {
+        map.set(key, node);
+      } else {
+        map.delete(key);
+      }
+    },
+    []
+  );
+
+  const resolveLintTargetKey = React.useCallback((issue: LintIssue): string => {
+    if (!issue.nodeId && !issue.chainId) return "";
+    const scope: "node" | "chain" = issue.nodeId ? "node" : "chain";
+    const id = issue.nodeId ?? issue.chainId ?? "";
+    const topPath = scope === "node" ? "title" : "topicNodeId";
+    const paths = buildLintFallbackPaths(issue.path ?? "", topPath);
+    for (const candidate of paths) {
+      const key = buildLintTargetKey(scope, id, candidate);
+      if (lintTargetRefs.current.has(key)) {
+        return key;
+      }
+    }
+    return buildLintTargetKey(scope, id, paths[0] ?? topPath);
+  }, []);
 
   const parseLintResult = (payload: LintApiResponse): LintResult | null => {
     if (payload.format !== "json" || !payload.stdout) {
@@ -740,6 +798,28 @@ const App: React.FC = () => {
     }
   };
 
+  const focusLintTarget = React.useCallback(
+    (issue: LintIssue) => {
+      const key = resolveLintTargetKey(issue);
+      if (!key) return;
+      const target =
+        lintTargetRefs.current.get(key) ??
+        document.querySelector(`[data-lint-target="${key}"]`);
+      if (!target) return;
+
+      setLintFocusTarget(key);
+      if (target instanceof HTMLElement) {
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+        target.focus?.();
+      }
+
+      window.setTimeout(() => {
+        setLintFocusTarget((current) => (current === key ? "" : current));
+      }, 1500);
+    },
+    [resolveLintTargetKey]
+  );
+
   const handleLintIssueClick = (issue: LintIssue) => {
     if (issue.nodeId) {
       setMode("nodes");
@@ -749,25 +829,9 @@ const App: React.FC = () => {
       setSelectedChainId(issue.chainId);
     }
 
-    const key = issue.nodeId
-      ? buildLintTargetKey("node", issue.nodeId, issue.path ?? "")
-      : issue.chainId
-        ? buildLintTargetKey("chain", issue.chainId, issue.path ?? "")
-        : "";
-    if (!key) return;
-
-    setLintFocusTarget(key);
     window.setTimeout(() => {
-      const target = document.querySelector(`[data-lint-target="${key}"]`);
-      if (target instanceof HTMLElement) {
-        target.scrollIntoView({ behavior: "smooth", block: "center" });
-        target.focus?.();
-      }
+      focusLintTarget(issue);
     }, 80);
-
-    window.setTimeout(() => {
-      setLintFocusTarget((current) => (current === key ? "" : current));
-    }, 2000);
   };
 
   const nodeOptions = nodes.map((node) => ({ id: node.id, title: node.title }));
@@ -778,6 +842,7 @@ const App: React.FC = () => {
   const nodeIdTarget = buildLintTargetKey("node", draft.id, "id");
   const nodeTitleTarget = buildLintTargetKey("node", draft.id, "title");
   const nodeBodyTarget = buildLintTargetKey("node", draft.id, "body");
+  const nodeMentionsTarget = buildLintTargetKey("node", draft.id, "mentions");
   const chainIdTarget = buildLintTargetKey("chain", chainDraft.id, "id");
   const chainTitleTarget = buildLintTargetKey("chain", chainDraft.id, "title");
   const chainTopicTarget = buildLintTargetKey("chain", chainDraft.id, "topicNodeId");
@@ -921,6 +986,7 @@ const App: React.FC = () => {
                 <input
                   value={draft.id}
                   data-lint-target={nodeIdTarget}
+                  ref={registerLintTarget(nodeIdTarget)}
                   className={classNames(
                     nodeIdIssues.length > 0 && "input--error",
                     lintFocusTarget === nodeIdTarget && "input--lint-focus"
@@ -939,6 +1005,7 @@ const App: React.FC = () => {
                 <input
                   value={draft.title}
                   data-lint-target={nodeTitleTarget}
+                  ref={registerLintTarget(nodeTitleTarget)}
                   className={classNames(
                     nodeTitleIssues.length > 0 && "input--error",
                     lintFocusTarget === nodeTitleTarget && "input--lint-focus"
@@ -986,6 +1053,7 @@ const App: React.FC = () => {
                   rows={6}
                   value={draft.bodyText}
                   data-lint-target={nodeBodyTarget}
+                  ref={registerLintTarget(nodeBodyTarget)}
                   className={classNames(
                     nodeBodyIssues.length > 0 && "input--error",
                     lintFocusTarget === nodeBodyTarget && "input--lint-focus"
@@ -1005,7 +1073,15 @@ const App: React.FC = () => {
                 )}
               </label>
 
-              <div className="form__section">
+              <div
+                className={classNames(
+                  "form__section",
+                  lintFocusTarget === nodeMentionsTarget && "lint-focus"
+                )}
+                data-lint-target={nodeMentionsTarget}
+                ref={registerLintTarget(nodeMentionsTarget)}
+                tabIndex={-1}
+              >
                 <div className="form__section-header">
                   <h3>Mentions</h3>
                   <button
@@ -1057,6 +1133,7 @@ const App: React.FC = () => {
                               placeholder="Target node id"
                               value={row.targetId}
                               data-lint-target={mentionPath ? mentionTarget : undefined}
+                              ref={mentionPath ? registerLintTarget(mentionTarget) : undefined}
                               className={classNames(
                                 mentionIssues.length > 0 && "input--error",
                                 lintFocusTarget === mentionTarget && "input--lint-focus"
@@ -1166,6 +1243,11 @@ const App: React.FC = () => {
                 ) : (
                   <div className="grid grid--relations">
                     {draft.relations.map((row, index) => {
+                      const relationRowTarget = buildLintTargetKey(
+                        "node",
+                        draft.id,
+                        `relations[${index}]`
+                      );
                       const typeTarget = buildLintTargetKey(
                         "node",
                         draft.id,
@@ -1188,10 +1270,19 @@ const App: React.FC = () => {
                       ];
                       return (
                         <React.Fragment key={row.id}>
-                          <div className="grid__row">
+                          <div
+                            className={classNames(
+                              "grid__row",
+                              lintFocusTarget === relationRowTarget && "lint-focus"
+                            )}
+                            data-lint-target={relationRowTarget}
+                            ref={registerLintTarget(relationRowTarget)}
+                            tabIndex={-1}
+                          >
                             <select
                               value={row.type}
                               data-lint-target={typeTarget}
+                              ref={registerLintTarget(typeTarget)}
                               className={classNames(
                                 getLintIssuesForTarget(typeTarget).length > 0 && "input--error",
                                 lintFocusTarget === typeTarget && "input--lint-focus"
@@ -1216,6 +1307,7 @@ const App: React.FC = () => {
                             <select
                               value={row.facet}
                               data-lint-target={facetTarget}
+                              ref={registerLintTarget(facetTarget)}
                               className={classNames(
                                 getLintIssuesForTarget(facetTarget).length > 0 && "input--error",
                                 lintFocusTarget === facetTarget && "input--lint-focus"
@@ -1242,6 +1334,7 @@ const App: React.FC = () => {
                               placeholder="Target node id"
                               value={row.to}
                               data-lint-target={toTarget}
+                              ref={registerLintTarget(toTarget)}
                               className={classNames(
                                 getLintIssuesForTarget(toTarget).length > 0 && "input--error",
                                 lintFocusTarget === toTarget && "input--lint-focus"
@@ -1314,6 +1407,7 @@ const App: React.FC = () => {
                   value={chainDraft.id}
                   readOnly={!chainDraft.isNew}
                   data-lint-target={chainIdTarget}
+                  ref={registerLintTarget(chainIdTarget)}
                   className={classNames(
                     chainIdIssues.length > 0 && "input--error",
                     lintFocusTarget === chainIdTarget && "input--lint-focus"
@@ -1333,6 +1427,7 @@ const App: React.FC = () => {
                 <input
                   value={chainDraft.title}
                   data-lint-target={chainTitleTarget}
+                  ref={registerLintTarget(chainTitleTarget)}
                   className={classNames(
                     chainTitleIssues.length > 0 && "input--error",
                     lintFocusTarget === chainTitleTarget && "input--lint-focus"
@@ -1367,6 +1462,7 @@ const App: React.FC = () => {
                   placeholder="topicNodeId"
                   value={chainDraft.topicNodeId}
                   data-lint-target={chainTopicTarget}
+                  ref={registerLintTarget(chainTopicTarget)}
                   className={classNames(
                     !chainDraft.topicNodeId.trim() && "input--error",
                     chainTopicIssues.length > 0 && "input--error",
@@ -1407,6 +1503,11 @@ const App: React.FC = () => {
                 ) : (
                   <div className="step-list">
                     {chainDraft.steps.map((step, index) => {
+                      const stepTarget = buildLintTargetKey(
+                        "chain",
+                        chainDraft.id,
+                        `steps[${index}]`
+                      );
                       const questionTarget = buildLintTargetKey(
                         "chain",
                         chainDraft.id,
@@ -1418,101 +1519,127 @@ const App: React.FC = () => {
                           chainDraft.id,
                           `steps[${index}].answers.${age}`
                         );
+                      const stepMentionsTarget = buildLintTargetKey(
+                        "chain",
+                        chainDraft.id,
+                        `steps[${index}].mentions`
+                      );
                       const stepSuggestions = buildMentionSuggestions(
                         `${step.answers.child}\n${step.answers.adult}`,
                         nodes,
                         step.mentions
                       ).slice(0, 10);
                       return (
-                        <div key={step.id} className="step-card">
-                        <div className="step-card__header">
-                          <div>
-                            <strong>{step.id}</strong>
-                            <span>Step {index + 1}</span>
-                          </div>
-                          <button
-                            type="button"
-                            className="button button--ghost"
-                            onClick={() =>
-                              setChainDraft({
-                                ...chainDraft,
-                                steps: chainDraft.steps.filter((item) => item.id !== step.id)
-                              })
-                            }
-                          >
-                            Remove Step
-                          </button>
-                        </div>
-                        <label>
-                          <span>Step ID</span>
-                          <input value={step.id} readOnly />
-                        </label>
-                        <label>
-                          <span>Question</span>
-                          <textarea
-                            rows={3}
-                            value={step.question}
-                            data-lint-target={questionTarget}
-                            className={classNames(
-                              getLintIssuesForTarget(questionTarget).length > 0 && "input--error",
-                              lintFocusTarget === questionTarget && "input--lint-focus"
-                            )}
-                            onChange={(event) => {
-                              setChainDraft({
-                                ...chainDraft,
-                                steps: chainDraft.steps.map((item) =>
-                                  item.id === step.id
-                                    ? { ...item, question: event.target.value }
-                                    : item
-                                )
-                              });
-                            }}
-                          />
-                          {getLintIssuesForTarget(questionTarget).length > 0 && (
-                            <span className="form__hint form__hint--error">
-                              {formatLintMessage(getLintIssuesForTarget(questionTarget)[0])}
-                            </span>
+                        <div
+                          key={step.id}
+                          className={classNames(
+                            "step-card",
+                            lintFocusTarget === stepTarget && "lint-focus"
                           )}
-                        </label>
-                        <div className="grid grid--answers">
-                          {AGE_BANDS.map((age) => (
-                            <label key={age}>
-                              <span>Answer ({age})</span>
-                              <textarea
-                                rows={3}
-                                value={step.answers[age]}
-                                data-lint-target={answerTarget(age)}
-                                className={classNames(
-                                  getLintIssuesForTarget(answerTarget(age)).length > 0 &&
-                                    "input--error",
-                                  lintFocusTarget === answerTarget(age) && "input--lint-focus"
-                                )}
-                                onChange={(event) => {
-                                  setChainDraft({
-                                    ...chainDraft,
-                                    steps: chainDraft.steps.map((item) =>
-                                      item.id === step.id
-                                        ? {
-                                            ...item,
-                                            answers: {
-                                              ...item.answers,
-                                              [age]: event.target.value
-                                            }
-                                          }
-                                        : item
-                                    )
-                                  });
-                                }}
-                              />
-                              {getLintIssuesForTarget(answerTarget(age)).length > 0 && (
-                                <span className="form__hint form__hint--error">
-                                  {formatLintMessage(getLintIssuesForTarget(answerTarget(age))[0])}
-                                </span>
+                          data-lint-target={stepTarget}
+                          ref={registerLintTarget(stepTarget)}
+                          tabIndex={-1}
+                        >
+                          <div className="step-card__header">
+                            <div>
+                              <strong>{step.id}</strong>
+                              <span>Step {index + 1}</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="button button--ghost"
+                              onClick={() =>
+                                setChainDraft({
+                                  ...chainDraft,
+                                  steps: chainDraft.steps.filter((item) => item.id !== step.id)
+                                })
+                              }
+                            >
+                              Remove Step
+                            </button>
+                          </div>
+                          <label>
+                            <span>Step ID</span>
+                            <input value={step.id} readOnly />
+                          </label>
+                          <label>
+                            <span>Question</span>
+                            <textarea
+                              rows={3}
+                              value={step.question}
+                              data-lint-target={questionTarget}
+                              ref={registerLintTarget(questionTarget)}
+                              className={classNames(
+                                getLintIssuesForTarget(questionTarget).length > 0 && "input--error",
+                                lintFocusTarget === questionTarget && "input--lint-focus"
                               )}
-                            </label>
-                          ))}
-                        </div>
-                        <div className="form__section">
+                              onChange={(event) => {
+                                setChainDraft({
+                                  ...chainDraft,
+                                  steps: chainDraft.steps.map((item) =>
+                                    item.id === step.id
+                                      ? { ...item, question: event.target.value }
+                                      : item
+                                  )
+                                });
+                              }}
+                            />
+                            {getLintIssuesForTarget(questionTarget).length > 0 && (
+                              <span className="form__hint form__hint--error">
+                                {formatLintMessage(getLintIssuesForTarget(questionTarget)[0])}
+                              </span>
+                            )}
+                          </label>
+                          <div className="grid grid--answers">
+                            {AGE_BANDS.map((age) => (
+                              <label key={age}>
+                                <span>Answer ({age})</span>
+                                <textarea
+                                  rows={3}
+                                  value={step.answers[age]}
+                                  data-lint-target={answerTarget(age)}
+                                  ref={registerLintTarget(answerTarget(age))}
+                                  className={classNames(
+                                    getLintIssuesForTarget(answerTarget(age)).length > 0 &&
+                                      "input--error",
+                                    lintFocusTarget === answerTarget(age) && "input--lint-focus"
+                                  )}
+                                  onChange={(event) => {
+                                    setChainDraft({
+                                      ...chainDraft,
+                                      steps: chainDraft.steps.map((item) =>
+                                        item.id === step.id
+                                          ? {
+                                              ...item,
+                                              answers: {
+                                                ...item.answers,
+                                                [age]: event.target.value
+                                              }
+                                            }
+                                          : item
+                                      )
+                                    });
+                                  }}
+                                />
+                                {getLintIssuesForTarget(answerTarget(age)).length > 0 && (
+                                  <span className="form__hint form__hint--error">
+                                    {formatLintMessage(
+                                      getLintIssuesForTarget(answerTarget(age))[0]
+                                    )}
+                                  </span>
+                                )}
+                              </label>
+                            ))}
+                          </div>
+                        <div
+                          className={classNames(
+                            "form__section",
+                            lintFocusTarget === stepMentionsTarget && "lint-focus"
+                          )}
+                          data-lint-target={stepMentionsTarget}
+                          ref={registerLintTarget(stepMentionsTarget)}
+                          tabIndex={-1}
+                        >
                           <div className="form__section-header">
                             <h4>Mention Suggestions</h4>
                           </div>
@@ -1635,6 +1762,11 @@ const App: React.FC = () => {
                                         placeholder="Target node id"
                                         value={row.targetId}
                                         data-lint-target={mentionPath ? mentionTarget : undefined}
+                                        ref={
+                                          mentionPath
+                                            ? registerLintTarget(mentionTarget)
+                                            : undefined
+                                        }
                                         className={classNames(
                                           mentionIssues.length > 0 && "input--error",
                                           lintFocusTarget === mentionTarget && "input--lint-focus"

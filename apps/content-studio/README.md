@@ -18,6 +18,7 @@
 ## 保存与 lint
 - 保存前会进行轻量校验（id/title/topicNodeId 等必填、关联目标存在等）。校验不通过会阻止保存并展示错误列表。
 - `Content lint` 仍是权威门禁；即使保存成功，也应以 `pnpm lint:content` 的结果为最终准入标准。
+- 点击 Lint Results 条目会自动定位并高亮对应字段。
 
 ### 手测步骤（自动 lint + inline errors）
 1. 在 Studio 中把某个 relation 的 `to` 改成不存在的 nodeId。
