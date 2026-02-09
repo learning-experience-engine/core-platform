@@ -62,6 +62,9 @@ importers:
       '@lxp/renderer-web':
         specifier: workspace:*
         version: link:../../packages/renderer-web
+      '@lxp/schema':
+        specifier: workspace:*
+        version: link:../../packages/schema
       react:
         specifier: ^19.0.0
         version: 19.2.4

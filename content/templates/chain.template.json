@@ -1,0 +1,18 @@
+{
+  "id": "new_chain_id",
+  "title": "主题问题链标题",
+  "topicNodeId": "topic_node_id",
+  "steps": [
+    {
+      "id": "step-1",
+      "question": "从真实问题出发的第一问？",
+      "answers": {
+        "child": "儿童版本回答（更直观、类比）。",
+        "adult": "成人版本回答（更完整、抽象）。"
+      },
+      "mentions": {
+        "关键术语": "related_node_id"
+      }
+    }
+  ]
+}

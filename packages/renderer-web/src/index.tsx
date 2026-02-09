@@ -21,6 +21,7 @@ export type QuestionChainPanelProps = {
   state: QuestionChainState;
   dispatch: (action: QuestionChainAction) => void;
   onMentionNavigate?: (nodeId: string) => void;
+  nodesById?: Record<string, Node>;
 };
 
 type RelationDockProps = {
@@ -57,6 +58,30 @@ const TYPE_LABELS: Record<RelationType, string> = {
 
 const isDev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? false;
 
+const getMissingMentions = (
+  mentions: Record<string, string> | undefined,
+  nodesById: Record<string, Node> | undefined
+): string[] => {
+  if (!isDev || !mentions || !nodesById) return [];
+  return Object.values(mentions).filter((targetId) => !nodesById[targetId]);
+};
+
+const getMissingRelations = (node: Node, nodesById: Record<string, Node>): string[] => {
+  if (!isDev) return [];
+  return node.relations.map((rel) => rel.to).filter((targetId) => !nodesById[targetId]);
+};
+
+const DevWarning: React.FC<{ title: string; items: string[] }> = ({ title, items }) => {
+  if (!isDev || items.length === 0) return null;
+  return (
+    <div className="dev-warning" role="status" aria-live="polite">
+      <strong>{title}</strong>
+      <span>Missing nodeId:</span>
+      <span>{items.join(", ")}</span>
+    </div>
+  );
+};
+
 const warnOnUnknown = (relations: RelationView[]) => {
   if (!isDev) return;
   relations.forEach((rel) => {
@@ -81,6 +106,10 @@ const groupByType = (relations: RelationView[]) => {
 };
 
 export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onNavigate }) => {
+  const missingRelations = React.useMemo(
+    () => getMissingRelations(node, nodesById),
+    [node, nodesById]
+  );
   const grouped = React.useMemo(
     () => groupRelationsByFacet(node, nodesById),
     [node, nodesById]
@@ -119,6 +148,7 @@ export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onN
 
   return (
     <div className="relation-dock">
+      <DevWarning title="Dev warning (relations)" items={missingRelations} />
       <div
         className="relation-dock__tabs"
         role="tablist"
@@ -195,7 +225,7 @@ export const GraphMini: React.FC<GraphMiniProps> = ({
             </li>
           ))}
           {neighborhood.truncated ? (
-            <li className="graph-mini__more">+ more neighbors not shown</li>
+            <li className="graph-mini__more">More neighbors not shown</li>
           ) : null}
         </ul>
       </section>
@@ -226,7 +256,7 @@ export const GraphMini: React.FC<GraphMiniProps> = ({
         </div>
       </div>
       {neighborhood.truncated ? (
-        <p className="graph-mini__more">+ more neighbors not shown</p>
+        <p className="graph-mini__more">More neighbors not shown</p>
       ) : null}
     </section>
   );
@@ -321,28 +351,33 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   hasChain
 }) => {
   const handleNavigate = onNavigate ?? onRelationClick ?? onNodeClick;
+  const missingMentions = React.useMemo(
+    () => getMissingMentions(node.mentions, nodesById),
+    [node.mentions, nodesById]
+  );
 
   return (
     <article className="node-card">
       <header className="node-card__header">
         <h2>{node.title}</h2>
       </header>
+      <DevWarning title="Dev warning (mentions)" items={missingMentions} />
       <p className="node-card__body">{renderBody(node.body, node.mentions, onMentionClick)}</p>
       <footer className="node-card__footer">
         {hasChain ? (
           <div className="node-card__chain">
             <button type="button" className="chain-start" onClick={onStartChain}>
-              Start Question Chain
+              开始问题链
             </button>
           </div>
         ) : null}
         <div className="node-card__relations">
-          <h3>Relations</h3>
+          <h3>关系</h3>
           <RelationDock node={node} nodesById={nodesById} onNavigate={handleNavigate} />
         </div>
         {neighborhood ? (
           <div className="node-card__graph">
-            <h3>Neighborhood</h3>
+            <h3>邻域</h3>
             {neighborhood}
           </div>
         ) : null}
@@ -359,21 +394,26 @@ const getStep = (chain: QuestionChain, index: number): ChainStep | undefined => 
 };
 
 const AGE_LABELS: Record<AgeBand, string> = {
-  child: "Child",
-  adult: "Adult"
+  child: "儿童",
+  adult: "成人"
 };
 
 export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
   chain,
   state,
   dispatch,
-  onMentionNavigate
+  onMentionNavigate,
+  nodesById
 }) => {
   const total = chain.steps.length;
   const currentIndex = total === 0 ? 0 : Math.min(Math.max(state.stepIndex, 0), total - 1);
   const step = getStep(chain, currentIndex);
   const isFirst = currentIndex <= 0;
   const isLast = currentIndex >= total - 1;
+  const missingMentions = React.useMemo(
+    () => getMissingMentions(step?.mentions, nodesById),
+    [step?.mentions, nodesById]
+  );
 
   if (!step) {
     return (
@@ -387,22 +427,32 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
     <section className="question-chain">
       <header className="question-chain__header">
         <div>
-          <p className="question-chain__kicker">Question Chain</p>
+          <p className="question-chain__kicker">问题链</p>
           <h3>{chain.title}</h3>
         </div>
-        <div className="question-chain__ages" role="group" aria-label="Age switch">
-          {(Object.keys(AGE_LABELS) as AgeBand[]).map((age) => (
-            <button
-              key={age}
-              type="button"
-              className={`question-chain__age${state.age === age ? " is-active" : ""}`}
-              onClick={() => dispatch({ type: "SET_AGE", age })}
-            >
-              {AGE_LABELS[age]}
-            </button>
-          ))}
+        <div className="question-chain__actions">
+          <button
+            type="button"
+            className="question-chain__exit"
+            onClick={() => dispatch({ type: "EXIT" })}
+          >
+            退出
+          </button>
+          <div className="question-chain__ages" role="group" aria-label="Age switch">
+            {(Object.keys(AGE_LABELS) as AgeBand[]).map((age) => (
+              <button
+                key={age}
+                type="button"
+                className={`question-chain__age${state.age === age ? " is-active" : ""}`}
+                onClick={() => dispatch({ type: "SET_AGE", age })}
+              >
+                {AGE_LABELS[age]}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
+      <DevWarning title="Dev warning (chain mentions)" items={missingMentions} />
       <div className="question-chain__body">
         <h4>{step.question}</h4>
         <p>{renderMentions(step.answers[state.age], step.mentions, onMentionNavigate)}</p>
@@ -415,7 +465,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
             onClick={() => dispatch({ type: "PREV" })}
             disabled={isFirst}
           >
-            Prev
+            上一步
           </button>
           <button
             type="button"
@@ -423,7 +473,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
             onClick={() => dispatch({ type: "NEXT" })}
             disabled={isLast}
           >
-            Next
+            下一步
           </button>
         </div>
         <div className="question-chain__indicator">

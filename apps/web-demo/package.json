@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@lxp/core": "workspace:*",
+    "@lxp/schema": "workspace:*",
     "@lxp/renderer-web": "workspace:*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
