@@ -37,14 +37,14 @@ pnpm install
 pnpm dev
 ```
 
-## Try it quickly (5 URLs)
+## Try it quickly (7 URLs)
 
-- Weather deep-dive: `http://localhost:5173/?stack=weather,air_pressure,wind`
-- Weather chain: `http://localhost:5173/?stack=weather&chain=typhoon_safety&step=0&age=adult`
-- Skin deep-dive: `http://localhost:5173/?stack=skin,epidermis,dermis`
-- Skin chain: `http://localhost:5173/?stack=skin&chain=skin_intro&step=0&age=adult`
-- Sun tan chain: `http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult`
-- Plant cell chain: `http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult`
+- Cell deep-dive: `http://localhost:5173/?stack=plant_cell,cell_wall,membrane`
+- Cell chain: `http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult`
+- Weather chain (typhoon_safety): `http://localhost:5173/?stack=weather&chain=typhoon_safety&step=0&age=adult`
+- Weather chain (weather_intro): `http://localhost:5173/?stack=weather&chain=weather_intro&step=0&age=adult`
+- Skin chain (sun_tan_uv): `http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult`
+- Skin chain (acne_why): `http://localhost:5173/?stack=skin&chain=acne_why&step=0&age=adult`
 - Mixed path: `http://localhost:5173/?stack=plant_cell,protoplast&chain=plant_cell_intro&step=1&age=child`
 
 ## Where to contribute

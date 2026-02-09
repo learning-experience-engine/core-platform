@@ -69,3 +69,19 @@ Status: NOT RUN (no interactive browser / GUI access in current environment)
 3) Start `acne_why` chain (or open its URL directly)
    - Expected: Prev/Next works (no out-of-bounds).
    - Expected: At least step 1–2 mention navigation works and returns to chain.
+
+## Weather chain smoke (manual)
+
+Status: NOT RUN (no interactive browser / GUI access)
+
+URLs to test: typhoon_safety, weather_intro
+
+Steps + Expected:
+1. Open the typhoon_safety URL
+Expected: chain can start, Child/Adult toggle changes answers.
+Expected: clicking mentions deep-dives to nodes without losing chain state.
+Expected: Exit/Close clears chain params from URL.
+
+2. Open the weather_intro URL (if present)
+Expected: chain loads and mentions deep-dive without losing chain state.
+Expected: Exit/Close clears chain params from URL.

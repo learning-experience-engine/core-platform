@@ -41,3 +41,10 @@ Open: http://localhost:5173
 - Sun tan chain: http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult (晒黑与防晒主题)
 - Plant cell chain: http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult
 - Mixed: http://localhost:5173/?stack=plant_cell,protoplast&chain=plant_cell_intro&step=1&age=child
+
+## Chains showcase
+
+- Cell: http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult (植物细胞入门)
+- Weather: http://localhost:5173/?stack=weather&chain=typhoon_safety&step=0&age=adult (预警与准备)
+- Skin: http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult (晒黑与防晒)
+- Skin: http://localhost:5173/?stack=skin&chain=acne_why&step=0&age=adult (痘痘机制)
