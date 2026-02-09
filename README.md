@@ -39,8 +39,8 @@ pnpm dev
 
 ## Try it quickly (3 URLs)
 
-- Deep-dive stack: `http://localhost:5173/?stack=plant_cell,protoplast,membrane`
-- Question chain: `http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult`
+- Weather deep-dive: `http://localhost:5173/?stack=weather,air_pressure,wind`
+- Plant cell chain: `http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult`
 - Mixed path: `http://localhost:5173/?stack=plant_cell,protoplast&chain=plant_cell_intro&step=1&age=child`
 
 ## Where to contribute
