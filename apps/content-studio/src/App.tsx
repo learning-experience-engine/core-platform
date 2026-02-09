@@ -17,6 +17,29 @@ const AGE_BANDS: AgeBand[] = ["child", "adult"];
 const makeId = () =>
   globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const slugify = (value: string): string => {
+  return value.trim().replace(/\s+/g, "_").replace(/[^A-Za-z0-9_]/g, "");
+};
+
+const makeBaseId = (title: string, prefix: string): string => {
+  const slug = slugify(title);
+  if (slug) return slug;
+  return `${prefix}_${Date.now()}`;
+};
+
+const titleToId = (title: string): string => slugify(title);
+
+const makeUniqueId = (base: string, existing: Set<string>): string => {
+  if (!existing.has(base)) return base;
+  let index = 2;
+  let candidate = `${base}_${index}`;
+  while (existing.has(candidate)) {
+    index += 1;
+    candidate = `${base}_${index}`;
+  }
+  return candidate;
+};
+
 type MentionRow = {
   id: string;
   term: string;
@@ -38,6 +61,7 @@ type DraftNode = {
   bodyText: string;
   mentions: MentionRow[];
   relations: RelationRow[];
+  isNew: boolean;
 };
 
 type DraftStep = {
@@ -121,7 +145,8 @@ const emptyDraftNode = (): DraftNode => ({
   body: "",
   bodyText: "",
   mentions: [],
-  relations: []
+  relations: [],
+  isNew: true
 });
 
 const buildDraftNode = (node: Node): DraftNode => ({
@@ -130,7 +155,8 @@ const buildDraftNode = (node: Node): DraftNode => ({
   body: node.body,
   bodyText: getBodyText(node.body),
   mentions: toMentionRows(node.mentions),
-  relations: toRelationRows(node.relations)
+  relations: toRelationRows(node.relations),
+  isNew: false
 });
 
 const buildNode = (draft: DraftNode): Node => ({
@@ -176,10 +202,10 @@ const buildChain = (draft: DraftChain): QuestionChain => ({
   steps: draft.steps.map(buildStepPayload)
 });
 
-const createEmptyChain = (seed: number): DraftChain => ({
-  id: `new_chain_${seed}`,
+const createEmptyChain = (id: string, topicNodeId: string): DraftChain => ({
+  id,
   title: "",
-  topicNodeId: "",
+  topicNodeId,
   steps: [],
   isNew: true
 });
@@ -198,6 +224,121 @@ const getNextStepId = (steps: DraftStep[]): string => {
     index += 1;
   }
   return `step_${index}`;
+};
+
+const isCjk = (value: string): boolean => /[\u4e00-\u9fff]/.test(value);
+
+const meetsTermLength = (term: string): boolean => {
+  const compact = term.replace(/\s+/g, "");
+  if (!compact) return false;
+  if (isCjk(compact)) return compact.length >= 2;
+  return compact.length >= 3;
+};
+
+type MentionSuggestion = {
+  term: string;
+  targetId: string;
+  targetTitle: string;
+  index: number;
+};
+
+const buildMentionSuggestions = (
+  text: string,
+  nodes: Node[],
+  existingMentions: MentionRow[],
+  excludeNodeId?: string
+): MentionSuggestion[] => {
+  const normalizedText = text.toLowerCase();
+  const existingTerms = new Set(
+    existingMentions.map((mention) => mention.term.trim().toLowerCase()).filter(Boolean)
+  );
+  const suggestions: MentionSuggestion[] = [];
+
+  nodes.forEach((node) => {
+    if (excludeNodeId && node.id === excludeNodeId) return;
+    const term = node.title.trim();
+    if (!term) return;
+    if (!meetsTermLength(term)) return;
+    const termKey = term.toLowerCase();
+    if (existingTerms.has(termKey)) return;
+    const index = normalizedText.indexOf(termKey);
+    if (index === -1) return;
+    suggestions.push({ term, targetId: node.id, targetTitle: node.title, index });
+  });
+
+  suggestions.sort((a, b) => {
+    if (b.term.length !== a.term.length) return b.term.length - a.term.length;
+    return a.index - b.index;
+  });
+
+  const seen = new Set<string>();
+  return suggestions.filter((item) => {
+    const key = `${item.term}__${item.targetId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const validateNodeDraft = (
+  draft: DraftNode,
+  nodes: Node[],
+  selectedId: string
+): string[] => {
+  const errors: string[] = [];
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const trimmedId = draft.id.trim();
+  const trimmedTitle = draft.title.trim();
+
+  if (!trimmedId) errors.push("Node id is required.");
+  if (!trimmedTitle) errors.push("Node title is required.");
+
+  const existing = nodes.find((node) => node.id === trimmedId);
+  if (existing && existing.id !== selectedId) {
+    errors.push(`Node id must be unique (duplicate: ${trimmedId}).`);
+  }
+
+  draft.relations.forEach((relation, index) => {
+    const target = relation.to.trim();
+    if (!target) {
+      errors.push(`Relation #${index + 1} target is required.`);
+      return;
+    }
+    if (!nodeIds.has(target)) {
+      errors.push(`Relation #${index + 1} target does not exist (${target}).`);
+    }
+  });
+
+  return errors;
+};
+
+const validateChainDraft = (
+  draft: DraftChain,
+  nodes: Node[]
+): string[] => {
+  const errors: string[] = [];
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  const trimmedId = draft.id.trim();
+  const trimmedTitle = draft.title.trim();
+  const trimmedTopic = draft.topicNodeId.trim();
+
+  if (!trimmedId) errors.push("Chain id is required.");
+  if (!trimmedTitle) errors.push("Chain title is required.");
+  if (!trimmedTopic) errors.push("Chain topicNodeId is required.");
+  if (trimmedTopic && !nodeIds.has(trimmedTopic)) {
+    errors.push(`Chain topicNodeId does not exist (${trimmedTopic}).`);
+  }
+  if (draft.steps.length === 0) errors.push("Chain must have at least one step.");
+
+  draft.steps.forEach((step, index) => {
+    const hasChild = Object.prototype.hasOwnProperty.call(step.answers, "child");
+    const hasAdult = Object.prototype.hasOwnProperty.call(step.answers, "adult");
+    if (!hasChild || !hasAdult) {
+      errors.push(`Step #${index + 1} answers must include child and adult keys.`);
+    }
+  });
+
+  return errors;
 };
 
 const fetchNodes = async (): Promise<Node[]> => {
@@ -256,12 +397,16 @@ const App: React.FC = () => {
   const [selectedId, setSelectedId] = React.useState<string>("");
   const [selectedChainId, setSelectedChainId] = React.useState<string>("");
   const [draft, setDraft] = React.useState<DraftNode>(() => emptyDraftNode());
-  const [chainDraft, setChainDraft] = React.useState<DraftChain>(() => createEmptyChain(1));
+  const [chainDraft, setChainDraft] = React.useState<DraftChain>(() =>
+    createEmptyChain("", "")
+  );
   const [search, setSearch] = React.useState("");
   const [chainSearch, setChainSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("");
   const [lintOutput, setLintOutput] = React.useState<string>("");
   const [lintStatus, setLintStatus] = React.useState<string>("");
+  const [nodeErrors, setNodeErrors] = React.useState<string[]>([]);
+  const [chainErrors, setChainErrors] = React.useState<string[]>([]);
 
   React.useEffect(() => {
     Promise.all([fetchNodes(), fetchChains()])
@@ -286,6 +431,7 @@ const App: React.FC = () => {
     const node = nodes.find((item) => item.id === selectedId);
     if (node) {
       setDraft(buildDraftNode(node));
+      setNodeErrors([]);
     }
   }, [nodes, selectedId]);
 
@@ -293,6 +439,7 @@ const App: React.FC = () => {
     const chain = chains.find((item) => item.id === selectedChainId);
     if (chain) {
       setChainDraft(buildDraftChain(chain));
+      setChainErrors([]);
     }
   }, [chains, selectedChainId]);
 
@@ -320,6 +467,13 @@ const App: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      const errors = validateNodeDraft(draft, nodes, selectedId);
+      if (errors.length > 0) {
+        setNodeErrors(errors);
+        setStatus("保存失败: 表单校验未通过");
+        return;
+      }
+      setNodeErrors([]);
       setStatus("保存中...");
       const payload = buildNode(draft);
       await saveNode(payload);
@@ -334,12 +488,15 @@ const App: React.FC = () => {
 
   const handleSaveChain = async () => {
     try {
-      setStatus("保存中...");
-      const payload = buildChain(chainDraft);
-      if (!payload.id) {
-        setStatus("保存失败: chain.id 不能为空");
+      const errors = validateChainDraft(chainDraft, nodes);
+      if (errors.length > 0) {
+        setChainErrors(errors);
+        setStatus("保存失败: 表单校验未通过");
         return;
       }
+      setChainErrors([]);
+      setStatus("保存中...");
+      const payload = buildChain(chainDraft);
       if (chainDraft.isNew && chains.some((chain) => chain.id === payload.id)) {
         setStatus(`保存失败: chain.id 已存在 (${payload.id})`);
         return;
@@ -355,16 +512,27 @@ const App: React.FC = () => {
   };
 
   const handleNew = () => {
+    const existing = new Set(nodes.map((node) => node.id));
+    const base = makeBaseId("", "node");
     const next = emptyDraftNode();
-    next.id = `new_node_${nodes.length + 1}`;
+    next.id = makeUniqueId(base, existing);
     setDraft(next);
     setSelectedId("");
+    setNodeErrors([]);
+    setStatus("新节点已创建");
   };
 
   const handleNewChain = () => {
-    const next = createEmptyChain(chains.length + 1);
+    const existing = new Set(chains.map((chain) => chain.id));
+    const base = makeBaseId("", "chain");
+    const id = makeUniqueId(base, existing);
+    const topicNodeId = selectedId ? selectedId : "";
+    const next = createEmptyChain(id, topicNodeId);
+    next.steps = [createStep("step_1")];
     setChainDraft(next);
     setSelectedChainId("");
+    setChainErrors([]);
+    setStatus("新链路已创建");
   };
 
   const handleLint = async () => {
@@ -380,6 +548,9 @@ const App: React.FC = () => {
   };
 
   const nodeOptions = nodes.map((node) => ({ id: node.id, title: node.title }));
+  const nodeSuggestions = React.useMemo(() => {
+    return buildMentionSuggestions(draft.bodyText, nodes, draft.mentions, draft.id).slice(0, 10);
+  }, [draft.bodyText, draft.mentions, draft.id, nodes]);
 
   return (
     <div className="studio">
@@ -416,18 +587,12 @@ const App: React.FC = () => {
           </div>
           {mode === "nodes" ? (
             <>
-              <button type="button" className="button button--ghost" onClick={handleNew}>
-                New node
-              </button>
               <button type="button" className="button" onClick={handleSave}>
                 Save
               </button>
             </>
           ) : (
             <>
-              <button type="button" className="button button--ghost" onClick={handleNewChain}>
-                New chain
-              </button>
               <button type="button" className="button" onClick={handleSaveChain}>
                 Save
               </button>
@@ -454,6 +619,17 @@ const App: React.FC = () => {
                 : setChainSearch(event.target.value)
             }
           />
+          <div className="panel__actions">
+            {mode === "nodes" ? (
+              <button type="button" className="button button--ghost" onClick={handleNew}>
+                New Node
+              </button>
+            ) : (
+              <button type="button" className="button button--ghost" onClick={handleNewChain}>
+                New Chain
+              </button>
+            )}
+          </div>
           <div className="panel__list">
             {mode === "nodes"
               ? filtered.map((node) => (
@@ -493,18 +669,44 @@ const App: React.FC = () => {
 
           {mode === "nodes" ? (
             <div className="form">
+              {nodeErrors.length > 0 && (
+                <div className="form__errors">
+                  <strong>请先修正以下问题：</strong>
+                  <ul>
+                    {nodeErrors.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <label>
                 <span>ID</span>
                 <input
                   value={draft.id}
                   onChange={(event) => setDraft({ ...draft, id: event.target.value })}
                 />
+                {draft.isNew && <span className="form__hint">未保存</span>}
               </label>
               <label>
                 <span>Title</span>
                 <input
                   value={draft.title}
-                  onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                  onChange={(event) => {
+                    const nextTitle = event.target.value;
+                    let nextId = draft.id;
+                    if (draft.isNew) {
+                      const baseFromTitle = titleToId(nextTitle);
+                      const shouldUpdate =
+                        !draft.id ||
+                        draft.id.startsWith("node_") ||
+                        draft.id === titleToId(draft.title);
+                      if (baseFromTitle && shouldUpdate) {
+                        const existing = new Set(nodes.map((node) => node.id));
+                        nextId = makeUniqueId(baseFromTitle, existing);
+                      }
+                    }
+                    setDraft({ ...draft, title: nextTitle, id: nextId });
+                  }}
                 />
               </label>
               <label>
@@ -582,6 +784,45 @@ const App: React.FC = () => {
                           }
                         >
                           Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="form__section">
+                <div className="form__section-header">
+                  <h3>Mention Suggestions</h3>
+                </div>
+                {nodeSuggestions.length === 0 ? (
+                  <p className="form__empty">No suggestions</p>
+                ) : (
+                  <div className="suggestion-list">
+                    {nodeSuggestions.map((suggestion) => (
+                      <div key={`${suggestion.term}-${suggestion.targetId}`} className="suggestion">
+                        <div>
+                          <strong>{suggestion.term}</strong>
+                          <span>→ {suggestion.targetTitle}</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="button button--ghost"
+                          onClick={() =>
+                            setDraft({
+                              ...draft,
+                              mentions: [
+                                ...draft.mentions,
+                                {
+                                  id: makeId(),
+                                  term: suggestion.term,
+                                  targetId: suggestion.targetId
+                                }
+                              ]
+                            })
+                          }
+                        >
+                          Add
                         </button>
                       </div>
                     ))}
@@ -705,6 +946,16 @@ const App: React.FC = () => {
             </div>
           ) : (
             <div className="form">
+              {chainErrors.length > 0 && (
+                <div className="form__errors">
+                  <strong>请先修正以下问题：</strong>
+                  <ul>
+                    {chainErrors.map((error) => (
+                      <li key={error}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <label>
                 <span>Chain ID</span>
                 <input
@@ -719,9 +970,22 @@ const App: React.FC = () => {
                 <span>Title</span>
                 <input
                   value={chainDraft.title}
-                  onChange={(event) =>
-                    setChainDraft({ ...chainDraft, title: event.target.value })
-                  }
+                  onChange={(event) => {
+                    const nextTitle = event.target.value;
+                    let nextId = chainDraft.id;
+                    if (chainDraft.isNew) {
+                      const baseFromTitle = titleToId(nextTitle);
+                      const shouldUpdate =
+                        !chainDraft.id ||
+                        chainDraft.id.startsWith("chain_") ||
+                        chainDraft.id === titleToId(chainDraft.title);
+                      if (baseFromTitle && shouldUpdate) {
+                        const existing = new Set(chains.map((chain) => chain.id));
+                        nextId = makeUniqueId(baseFromTitle, existing);
+                      }
+                    }
+                    setChainDraft({ ...chainDraft, title: nextTitle, id: nextId });
+                  }}
                 />
               </label>
               <label>
@@ -730,10 +994,14 @@ const App: React.FC = () => {
                   list="node-ids"
                   placeholder="topicNodeId"
                   value={chainDraft.topicNodeId}
+                  className={!chainDraft.topicNodeId.trim() ? "input--error" : undefined}
                   onChange={(event) =>
                     setChainDraft({ ...chainDraft, topicNodeId: event.target.value })
                   }
                 />
+                {!chainDraft.topicNodeId.trim() && (
+                  <span className="form__hint form__hint--error">Topic node 不能为空</span>
+                )}
               </label>
 
               <div className="form__section">
@@ -756,8 +1024,14 @@ const App: React.FC = () => {
                   <p className="form__empty">No steps</p>
                 ) : (
                   <div className="step-list">
-                    {chainDraft.steps.map((step, index) => (
-                      <div key={step.id} className="step-card">
+                    {chainDraft.steps.map((step, index) => {
+                      const stepSuggestions = buildMentionSuggestions(
+                        `${step.answers.child}\n${step.answers.adult}`,
+                        nodes,
+                        step.mentions
+                      ).slice(0, 10);
+                      return (
+                        <div key={step.id} className="step-card">
                         <div className="step-card__header">
                           <div>
                             <strong>{step.id}</strong>
@@ -823,6 +1097,54 @@ const App: React.FC = () => {
                               />
                             </label>
                           ))}
+                        </div>
+                        <div className="form__section">
+                          <div className="form__section-header">
+                            <h4>Mention Suggestions</h4>
+                          </div>
+                          {stepSuggestions.length === 0 ? (
+                            <p className="form__empty">No suggestions</p>
+                          ) : (
+                            <div className="suggestion-list">
+                              {stepSuggestions.map((suggestion) => (
+                                <div
+                                  key={`${step.id}-${suggestion.term}-${suggestion.targetId}`}
+                                  className="suggestion"
+                                >
+                                  <div>
+                                    <strong>{suggestion.term}</strong>
+                                    <span>→ {suggestion.targetTitle}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="button button--ghost"
+                                    onClick={() =>
+                                      setChainDraft({
+                                        ...chainDraft,
+                                        steps: chainDraft.steps.map((item) =>
+                                          item.id === step.id
+                                            ? {
+                                                ...item,
+                                                mentions: [
+                                                  ...item.mentions,
+                                                  {
+                                                    id: makeId(),
+                                                    term: suggestion.term,
+                                                    targetId: suggestion.targetId
+                                                  }
+                                                ]
+                                              }
+                                            : item
+                                        )
+                                      })
+                                    }
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <div className="form__section">
                           <div className="form__section-header">
@@ -929,7 +1251,8 @@ const App: React.FC = () => {
                           )}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
