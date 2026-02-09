@@ -332,17 +332,17 @@ export const NodeCard: React.FC<NodeCardProps> = ({
         {hasChain ? (
           <div className="node-card__chain">
             <button type="button" className="chain-start" onClick={onStartChain}>
-              Start Question Chain
+              开始问题链
             </button>
           </div>
         ) : null}
         <div className="node-card__relations">
-          <h3>Relations</h3>
+          <h3>关系</h3>
           <RelationDock node={node} nodesById={nodesById} onNavigate={handleNavigate} />
         </div>
         {neighborhood ? (
           <div className="node-card__graph">
-            <h3>Neighborhood</h3>
+            <h3>邻域</h3>
             {neighborhood}
           </div>
         ) : null}
@@ -359,8 +359,8 @@ const getStep = (chain: QuestionChain, index: number): ChainStep | undefined => 
 };
 
 const AGE_LABELS: Record<AgeBand, string> = {
-  child: "Child",
-  adult: "Adult"
+  child: "儿童",
+  adult: "成人"
 };
 
 export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
@@ -387,20 +387,29 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
     <section className="question-chain">
       <header className="question-chain__header">
         <div>
-          <p className="question-chain__kicker">Question Chain</p>
+          <p className="question-chain__kicker">问题链</p>
           <h3>{chain.title}</h3>
         </div>
-        <div className="question-chain__ages" role="group" aria-label="Age switch">
-          {(Object.keys(AGE_LABELS) as AgeBand[]).map((age) => (
-            <button
-              key={age}
-              type="button"
-              className={`question-chain__age${state.age === age ? " is-active" : ""}`}
-              onClick={() => dispatch({ type: "SET_AGE", age })}
-            >
-              {AGE_LABELS[age]}
-            </button>
-          ))}
+        <div className="question-chain__actions">
+          <button
+            type="button"
+            className="question-chain__exit"
+            onClick={() => dispatch({ type: "EXIT" })}
+          >
+            退出
+          </button>
+          <div className="question-chain__ages" role="group" aria-label="Age switch">
+            {(Object.keys(AGE_LABELS) as AgeBand[]).map((age) => (
+              <button
+                key={age}
+                type="button"
+                className={`question-chain__age${state.age === age ? " is-active" : ""}`}
+                onClick={() => dispatch({ type: "SET_AGE", age })}
+              >
+                {AGE_LABELS[age]}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
       <div className="question-chain__body">
@@ -415,7 +424,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
             onClick={() => dispatch({ type: "PREV" })}
             disabled={isFirst}
           >
-            Prev
+            上一步
           </button>
           <button
             type="button"
@@ -423,7 +432,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
             onClick={() => dispatch({ type: "NEXT" })}
             disabled={isLast}
           >
-            Next
+            下一步
           </button>
         </div>
         <div className="question-chain__indicator">
