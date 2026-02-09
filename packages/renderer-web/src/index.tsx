@@ -1,6 +1,7 @@
+import type { NodeId } from "@lxp/core";
 import type { Facet, Node, RelationType } from "@lxp/schema";
 import { groupRelationsByFacet, type RelationView } from "@lxp/core";
-import { getNeighborhood, type GraphEdge, type Neighborhood } from "@lxp/graph";
+import { getNeighborhood, type NeighborhoodFacet } from "@lxp/graph";
 import React from "react";
 
 export type NodeCardProps = {
@@ -10,6 +11,7 @@ export type NodeCardProps = {
   onRelationClick?: (nodeId: string) => void;
   onNodeClick?: (nodeId: string) => void;
   onNavigate?: (nodeId: string) => void;
+  neighborhood?: React.ReactNode;
 };
 
 type RelationDockProps = {
@@ -19,9 +21,11 @@ type RelationDockProps = {
 };
 
 type GraphMiniProps = {
-  nodeId: string;
-  limit?: number;
-  onNodeClick?: (nodeId: string) => void;
+  centerId: NodeId;
+  nodesById: Record<NodeId, Node>;
+  facet: NeighborhoodFacet;
+  view: "graph" | "list";
+  onNavigate?: (nodeId: NodeId) => void;
 };
 
 const FACETS: Facet[] = ["what", "how", "in_life", "compare", "practice"];
@@ -43,11 +47,6 @@ const TYPE_LABELS: Record<RelationType, string> = {
 };
 
 const isDev = (import.meta as { env?: { DEV?: boolean } }).env?.DEV ?? false;
-
-const getEdgeLabel = (edge: GraphEdge) => `${edge.relation.type}:${edge.targetId}`;
-
-const buildNeighbors = (neighborhood: Neighborhood, sourceId: string) =>
-  neighborhood.nodes.filter((node) => node.id !== sourceId);
 
 const warnOnUnknown = (relations: RelationView[]) => {
   if (!isDev) return;
@@ -159,94 +158,67 @@ export const RelationDock: React.FC<RelationDockProps> = ({ node, nodesById, onN
   );
 };
 
-export const GraphMini: React.FC<GraphMiniProps> = ({ nodeId, limit = 8, onNodeClick }) => {
-  const [facet, setFacet] = React.useState<Facet | "all">("all");
-  const [mode, setMode] = React.useState<"graph" | "list">("graph");
-
+export const GraphMini: React.FC<GraphMiniProps> = ({
+  centerId,
+  nodesById,
+  facet,
+  view,
+  onNavigate
+}) => {
   const neighborhood = React.useMemo(
-    () => getNeighborhood(nodeId, facet === "all" ? undefined : facet, limit),
-    [nodeId, facet, limit]
+    () => getNeighborhood(centerId, nodesById, facet),
+    [centerId, nodesById, facet]
   );
 
-  const neighbors = React.useMemo(() => buildNeighbors(neighborhood, nodeId), [neighborhood, nodeId]);
-  const hasMore =
-    (getNeighborhood(nodeId, facet === "all" ? undefined : facet, Number.MAX_SAFE_INTEGER)
-      .edges.length ?? 0) > limit;
-
-  return (
-    <section className="graph-mini" aria-label="Neighborhood graph">
-      <header className="graph-mini__header">
-        <div className="graph-mini__tabs" role="tablist" aria-label="Facet filter">
-          {["all", ...FACETS].map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={facet === key}
-              className={`graph-mini__tab${facet === key ? " is-active" : ""}`}
-              onClick={() => setFacet(key as Facet | "all")}
-            >
-              {key === "all" ? "All" : FACET_LABELS[key as Facet]}
-            </button>
-          ))}
-        </div>
-        <div className="graph-mini__mode" role="group" aria-label="View mode">
-          <button
-            type="button"
-            className={`graph-mini__mode-btn${mode === "graph" ? " is-active" : ""}`}
-            onClick={() => setMode("graph")}
-          >
-            Graph view
-          </button>
-          <button
-            type="button"
-            className={`graph-mini__mode-btn${mode === "list" ? " is-active" : ""}`}
-            onClick={() => setMode("list")}
-          >
-            List view
-          </button>
-        </div>
-      </header>
-
-      {mode === "list" ? (
+  if (view === "list") {
+    return (
+      <section className="graph-mini" aria-label="Neighborhood list">
         <ul className="graph-mini__list">
-          {neighbors.map((node) => (
+          {neighborhood.nodes.map((node) => (
             <li key={node.id}>
-              <button type="button" className="graph-mini__node" onClick={() => onNodeClick?.(node.id)}>
+              <button
+                type="button"
+                className="graph-mini__chip"
+                onClick={() => onNavigate?.(node.id)}
+              >
                 {node.title}
               </button>
             </li>
           ))}
-          {hasMore ? <li className="graph-mini__more">+more</li> : null}
+          {neighborhood.truncated ? (
+            <li className="graph-mini__more">+ more neighbors not shown</li>
+          ) : null}
         </ul>
-      ) : (
-        <div className="graph-mini__grid" role="img" aria-label="Neighborhood layout">
-          <button type="button" className="graph-mini__node is-center" onClick={() => onNodeClick?.(nodeId)}>
-            {nodeId}
-          </button>
-          {neighbors.map((node) => (
+      </section>
+    );
+  }
+
+  return (
+    <section className="graph-mini" aria-label="Neighborhood graph">
+      <div className="graph-mini__graph" role="group" aria-label="Neighborhood layout">
+        <button
+          type="button"
+          className="graph-mini__center"
+          onClick={() => onNavigate?.(centerId)}
+        >
+          {neighborhood.center.title}
+        </button>
+        <div className="graph-mini__neighbors">
+          {neighborhood.nodes.map((node) => (
             <button
               key={node.id}
               type="button"
-              className="graph-mini__node"
-              onClick={() => onNodeClick?.(node.id)}
+              className="graph-mini__chip"
+              onClick={() => onNavigate?.(node.id)}
             >
               {node.title}
             </button>
           ))}
-          {hasMore ? <span className="graph-mini__more">+more</span> : null}
         </div>
-      )}
-
-      <div className="graph-mini__edges" aria-hidden="true">
-        {neighborhood.edges.map((edge) => (
-          <span key={getEdgeLabel(edge)} className="graph-mini__edge">
-            {edge.sourceId}
-            {" -> "}
-            {edge.targetId}
-          </span>
-        ))}
       </div>
+      {neighborhood.truncated ? (
+        <p className="graph-mini__more">+ more neighbors not shown</p>
+      ) : null}
     </section>
   );
 };
@@ -302,7 +274,8 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   onMentionClick,
   onRelationClick,
   onNodeClick,
-  onNavigate
+  onNavigate,
+  neighborhood
 }) => {
   const handleNavigate = onNavigate ?? onRelationClick ?? onNodeClick;
 
@@ -317,10 +290,12 @@ export const NodeCard: React.FC<NodeCardProps> = ({
           <h3>Relations</h3>
           <RelationDock node={node} nodesById={nodesById} onNavigate={handleNavigate} />
         </div>
-        <div className="node-card__graph">
-          <h3>Neighborhood</h3>
-          <GraphMini nodeId={node.id} onNodeClick={handleNavigate} />
-        </div>
+        {neighborhood ? (
+          <div className="node-card__graph">
+            <h3>Neighborhood</h3>
+            {neighborhood}
+          </div>
+        ) : null}
       </footer>
     </article>
   );

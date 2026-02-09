@@ -1,57 +1,104 @@
-import type { Facet, Node, Relation } from "@lxp/schema";
-import rawNodes from "../../../content/examples/nodes.json";
+import type { Facet, Node, RelationType } from "@lxp/schema";
 
-export type GraphEdge = {
-  sourceId: string;
-  targetId: string;
-  relation: Relation;
+export type NodeId = string;
+
+export type NeighborhoodFacet = "all" | Facet;
+
+export type NeighborhoodNode = {
+  id: NodeId;
+  title: string;
 };
 
-export type Neighborhood = {
-  nodes: Node[];
-  edges: GraphEdge[];
+export type NeighborhoodEdge = {
+  from: NodeId;
+  to: NodeId;
+  type: RelationType;
+  facet: Facet;
 };
 
-const nodes = rawNodes as Node[];
-
-const buildAdjacency = (list: Node[]) => {
-  const adjacency = new Map<string, GraphEdge[]>();
-
-  list.forEach((node) => {
-    const edges = node.relations.map((relation) => ({
-      sourceId: node.id,
-      targetId: relation.to,
-      relation
-    }));
-    adjacency.set(node.id, edges);
-  });
-
-  return adjacency;
+export type NeighborhoodResult = {
+  center: NeighborhoodNode;
+  nodes: NeighborhoodNode[];
+  edges: NeighborhoodEdge[];
+  truncated: boolean;
 };
 
-const adjacency = buildAdjacency(nodes);
-
-const getNode = (id: string): Node | undefined => nodes.find((node) => node.id === id);
+const RELATION_WEIGHTS: Record<RelationType, number> = {
+  has_part: 3,
+  part_of: 3,
+  compare_with: 2,
+  related: 1
+};
 
 export const getNeighborhood = (
-  nodeId: string,
-  facet?: Facet,
-  limit = 8
-): Neighborhood => {
-  const edges = adjacency.get(nodeId) ?? [];
-  const filtered = facet ? edges.filter((edge) => edge.relation.facet === facet) : edges;
-  const limited = filtered.slice(0, limit);
+  centerId: NodeId,
+  nodesById: Record<NodeId, Node>,
+  facet: NeighborhoodFacet,
+  limit = 12
+): NeighborhoodResult => {
+  const centerNode = nodesById[centerId];
+  const center: NeighborhoodNode = {
+    id: centerId,
+    title: centerNode?.title ?? String(centerId)
+  };
 
-  const nodeSet = new Set<string>();
-  nodeSet.add(nodeId);
-  limited.forEach((edge) => nodeSet.add(edge.targetId));
+  if (!centerNode) {
+    return { center, nodes: [], edges: [], truncated: false };
+  }
 
-  const neighborhoodNodes = [...nodeSet]
-    .map((id) => getNode(id))
-    .filter((node): node is Node => Boolean(node));
+  const edges: NeighborhoodEdge[] = [];
+  const edgeKeys = new Set<string>();
+
+  centerNode.relations.forEach((relation) => {
+    if (facet !== "all" && relation.facet !== facet) return;
+    const key = `${centerId}:${relation.to}:${relation.type}:${relation.facet}`;
+    if (edgeKeys.has(key)) return;
+    edgeKeys.add(key);
+    edges.push({
+      from: centerId,
+      to: relation.to,
+      type: relation.type,
+      facet: relation.facet
+    });
+  });
+
+  const neighborMeta = new Map<NodeId, { weight: number; firstIndex: number }>();
+  edges.forEach((edge, index) => {
+    const weight = RELATION_WEIGHTS[edge.type] ?? 1;
+    const current = neighborMeta.get(edge.to);
+    if (!current) {
+      neighborMeta.set(edge.to, { weight, firstIndex: index });
+      return;
+    }
+    if (weight > current.weight) {
+      neighborMeta.set(edge.to, { weight, firstIndex: current.firstIndex });
+    }
+  });
+
+  const totalNeighbors = neighborMeta.size;
+  let neighborIds = [...neighborMeta.entries()]
+    .sort(
+      ([, left], [, right]) =>
+        right.weight - left.weight || left.firstIndex - right.firstIndex
+    )
+    .map(([id]) => id);
+
+  const truncated = neighborIds.length > limit;
+  if (truncated) {
+    neighborIds = neighborIds.slice(0, Math.max(0, limit));
+  }
+
+  const keep = new Set(neighborIds);
+  const nodes = neighborIds.map((id) => ({
+    id,
+    title: nodesById[id]?.title ?? String(id)
+  }));
+  const filteredEdges = edges.filter((edge) => keep.has(edge.to));
 
   return {
-    nodes: neighborhoodNodes,
-    edges: limited
+    center,
+    nodes,
+    edges: filteredEdges,
+    truncated
   };
 };
