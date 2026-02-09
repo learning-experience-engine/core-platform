@@ -27,6 +27,19 @@ export type ChainStep = {
   question: string;
   answers: Record<AgeBand, string>;
   mentions?: Record<string, string>;
+  summary?: {
+    child?: string;
+    adult?: string;
+  };
+  check?: {
+    question: string;
+    options: string[];
+    answerIndex: number;
+    explanation?: {
+      child?: string;
+      adult?: string;
+    };
+  };
 };
 
 export type QuestionChain = {
@@ -34,4 +47,8 @@ export type QuestionChain = {
   title: string;
   topicNodeId: string;
   steps: ChainStep[];
+  goal?: {
+    child?: string;
+    adult?: string;
+  };
 };

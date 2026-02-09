@@ -70,6 +70,13 @@ type DraftStep = {
   question: string;
   answers: Record<AgeBand, string>;
   mentions: MentionRow[];
+  summary: { child: string; adult: string };
+  check: {
+    question: string;
+    options: string[];
+    answerIndex: number;
+    explanation: { child: string; adult: string };
+  } | null;
 };
 
 type DraftChain = {
@@ -77,6 +84,7 @@ type DraftChain = {
   title: string;
   topicNodeId: string;
   steps: DraftStep[];
+  goal: { child: string; adult: string };
   isNew: boolean;
 };
 
@@ -271,39 +279,87 @@ const buildDraftStep = (step: ChainStep): DraftStep => ({
     child: step.answers.child ?? "",
     adult: step.answers.adult ?? ""
   },
-  mentions: toMentionRows(step.mentions)
+  mentions: toMentionRows(step.mentions),
+  summary: {
+    child: step.summary?.child ?? "",
+    adult: step.summary?.adult ?? ""
+  },
+  check: step.check
+    ? {
+        question: step.check.question ?? "",
+        options: [...step.check.options],
+        answerIndex: step.check.answerIndex ?? 0,
+        explanation: {
+          child: step.check.explanation?.child ?? "",
+          adult: step.check.explanation?.adult ?? ""
+        }
+      }
+    : null
 });
 
 const buildDraftChain = (chain: QuestionChain): DraftChain => ({
   id: chain.id,
   title: chain.title,
   topicNodeId: chain.topicNodeId,
+  goal: {
+    child: chain.goal?.child ?? "",
+    adult: chain.goal?.adult ?? ""
+  },
   steps: chain.steps.map(buildDraftStep),
   isNew: false
 });
 
-const buildStepPayload = (step: DraftStep): ChainStep => ({
-  id: step.id,
-  question: step.question.trim(),
-  answers: {
-    child: step.answers.child.trim(),
-    adult: step.answers.adult.trim()
-  },
-  mentions: toMentionRecord(step.mentions)
-});
+const buildStepPayload = (step: DraftStep): ChainStep => {
+  const summaryChild = step.summary.child.trim();
+  const summaryAdult = step.summary.adult.trim();
+  const summary =
+    summaryChild || summaryAdult ? { child: summaryChild, adult: summaryAdult } : undefined;
+  const check =
+    step.check === null
+      ? undefined
+      : {
+          question: step.check.question.trim(),
+          options: step.check.options.map((option) => option.trim()),
+          answerIndex: step.check.answerIndex,
+          explanation: {
+            child: step.check.explanation.child.trim(),
+            adult: step.check.explanation.adult.trim()
+          }
+        };
 
-const buildChain = (draft: DraftChain): QuestionChain => ({
-  id: draft.id.trim(),
-  title: draft.title.trim(),
-  topicNodeId: draft.topicNodeId.trim(),
-  steps: draft.steps.map(buildStepPayload)
-});
+  return {
+    id: step.id,
+    question: step.question.trim(),
+    answers: {
+      child: step.answers.child.trim(),
+      adult: step.answers.adult.trim()
+    },
+    mentions: toMentionRecord(step.mentions),
+    ...(summary ? { summary } : {}),
+    ...(check ? { check } : {})
+  };
+};
+
+const buildChain = (draft: DraftChain): QuestionChain => {
+  const goalChild = draft.goal.child.trim();
+  const goalAdult = draft.goal.adult.trim();
+  const goal = goalChild || goalAdult ? { child: goalChild, adult: goalAdult } : undefined;
+
+  return {
+    id: draft.id.trim(),
+    title: draft.title.trim(),
+    topicNodeId: draft.topicNodeId.trim(),
+    steps: draft.steps.map(buildStepPayload),
+    ...(goal ? { goal } : {})
+  };
+};
 
 const createEmptyChain = (id: string, topicNodeId: string): DraftChain => ({
   id,
   title: "",
   topicNodeId,
   steps: [],
+  goal: { child: "", adult: "" },
   isNew: true
 });
 
@@ -311,7 +367,9 @@ const createStep = (id: string): DraftStep => ({
   id,
   question: "",
   answers: { child: "", adult: "" },
-  mentions: []
+  mentions: [],
+  summary: { child: "", adult: "" },
+  check: null
 });
 
 const DEFAULT_CHAIN_STEP_TEMPLATES = [
@@ -335,7 +393,9 @@ const createTemplateStep = (index: number): DraftStep => {
       child: buildTemplateAnswer(template.hint),
       adult: buildTemplateAnswer(template.hint)
     },
-    mentions: []
+    mentions: [],
+    summary: { child: "", adult: "" },
+    check: null
   };
 };
 
@@ -1569,6 +1629,29 @@ const App: React.FC = () => {
 
               <div className="form__section">
                 <div className="form__section-header">
+                  <h3>Goal</h3>
+                </div>
+                <div className="grid grid--answers">
+                  {AGE_BANDS.map((age) => (
+                    <label key={`goal-${age}`}>
+                      <span>Goal ({age})</span>
+                      <textarea
+                        rows={2}
+                        value={chainDraft.goal[age]}
+                        onChange={(event) =>
+                          setChainDraft({
+                            ...chainDraft,
+                            goal: { ...chainDraft.goal, [age]: event.target.value }
+                          })
+                        }
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form__section">
+                <div className="form__section-header">
                   <h3>Chain stats</h3>
                 </div>
                 <div className="coverage">
@@ -1741,6 +1824,248 @@ const App: React.FC = () => {
                                 )}
                               </label>
                             ))}
+                          </div>
+                          <div className="form__section">
+                            <div className="form__section-header">
+                              <h4>Summary</h4>
+                            </div>
+                            <div className="grid grid--answers">
+                              {AGE_BANDS.map((age) => (
+                                <label key={`summary-${step.id}-${age}`}>
+                                  <span>Summary ({age})</span>
+                                  <textarea
+                                    rows={2}
+                                    value={step.summary[age]}
+                                    onChange={(event) =>
+                                      setChainDraft({
+                                        ...chainDraft,
+                                        steps: chainDraft.steps.map((item) =>
+                                          item.id === step.id
+                                            ? {
+                                                ...item,
+                                                summary: {
+                                                  ...item.summary,
+                                                  [age]: event.target.value
+                                                }
+                                              }
+                                            : item
+                                        )
+                                      })
+                                    }
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="form__section">
+                            <div className="form__section-header">
+                              <h4>Quick Check</h4>
+                              {step.check ? (
+                                <button
+                                  type="button"
+                                  className="button button--ghost"
+                                  onClick={() =>
+                                    setChainDraft({
+                                      ...chainDraft,
+                                      steps: chainDraft.steps.map((item) =>
+                                        item.id === step.id ? { ...item, check: null } : item
+                                      )
+                                    })
+                                  }
+                                >
+                                  Remove
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="button button--ghost"
+                                  onClick={() =>
+                                    setChainDraft({
+                                      ...chainDraft,
+                                      steps: chainDraft.steps.map((item) =>
+                                        item.id === step.id
+                                          ? {
+                                              ...item,
+                                              check: {
+                                                question: "",
+                                                options: ["", ""],
+                                                answerIndex: 0,
+                                                explanation: { child: "", adult: "" }
+                                              }
+                                            }
+                                          : item
+                                      )
+                                    })
+                                  }
+                                >
+                                  Add
+                                </button>
+                              )}
+                            </div>
+                            {step.check ? (
+                              <>
+                                <label>
+                                  <span>Question</span>
+                                  <input
+                                    value={step.check.question}
+                                    onChange={(event) =>
+                                      setChainDraft({
+                                        ...chainDraft,
+                                        steps: chainDraft.steps.map((item) =>
+                                          item.id === step.id
+                                            ? {
+                                                ...item,
+                                                check: {
+                                                  ...item.check,
+                                                  question: event.target.value
+                                                }
+                                              }
+                                            : item
+                                        )
+                                      })
+                                    }
+                                  />
+                                </label>
+                                <div className="grid">
+                                  {step.check.options.map((option, optionIndex) => (
+                                    <div key={`${step.id}-opt-${optionIndex}`} className="grid__row">
+                                      <input
+                                        type="radio"
+                                        name={`answer-${step.id}`}
+                                        checked={step.check?.answerIndex === optionIndex}
+                                        onChange={() =>
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    check: {
+                                                      ...item.check,
+                                                      answerIndex: optionIndex
+                                                    }
+                                                  }
+                                                : item
+                                            )
+                                          })
+                                        }
+                                      />
+                                      <input
+                                        placeholder={`Option ${optionIndex + 1}`}
+                                        value={option}
+                                        onChange={(event) =>
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    check: {
+                                                      ...item.check,
+                                                      options: item.check.options.map(
+                                                        (value, index) =>
+                                                          index === optionIndex
+                                                            ? event.target.value
+                                                            : value
+                                                      )
+                                                    }
+                                                  }
+                                                : item
+                                            )
+                                          })
+                                        }
+                                      />
+                                      <button
+                                        type="button"
+                                        className="button button--ghost"
+                                        disabled={step.check.options.length <= 2}
+                                        onClick={() =>
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) => {
+                                              if (item.id !== step.id || !item.check) return item;
+                                              const nextOptions = item.check.options.filter(
+                                                (_, index) => index !== optionIndex
+                                              );
+                                              let nextAnswerIndex = item.check.answerIndex;
+                                              if (optionIndex === nextAnswerIndex) {
+                                                nextAnswerIndex = 0;
+                                              } else if (optionIndex < nextAnswerIndex) {
+                                                nextAnswerIndex -= 1;
+                                              }
+                                              return {
+                                                ...item,
+                                                check: {
+                                                  ...item.check,
+                                                  options: nextOptions,
+                                                  answerIndex: nextAnswerIndex
+                                                }
+                                              };
+                                            })
+                                          })
+                                        }
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="button button--ghost"
+                                  onClick={() =>
+                                    setChainDraft({
+                                      ...chainDraft,
+                                      steps: chainDraft.steps.map((item) =>
+                                        item.id === step.id
+                                          ? {
+                                              ...item,
+                                              check: {
+                                                ...item.check,
+                                                options: [...item.check.options, ""]
+                                              }
+                                            }
+                                          : item
+                                      )
+                                    })
+                                  }
+                                >
+                                  Add Option
+                                </button>
+                                <div className="grid grid--answers">
+                                  {AGE_BANDS.map((age) => (
+                                    <label key={`explain-${step.id}-${age}`}>
+                                      <span>Explanation ({age})</span>
+                                      <textarea
+                                        rows={2}
+                                        value={step.check.explanation[age]}
+                                        onChange={(event) =>
+                                          setChainDraft({
+                                            ...chainDraft,
+                                            steps: chainDraft.steps.map((item) =>
+                                              item.id === step.id
+                                                ? {
+                                                    ...item,
+                                                    check: {
+                                                      ...item.check,
+                                                      explanation: {
+                                                        ...item.check.explanation,
+                                                        [age]: event.target.value
+                                                      }
+                                                    }
+                                                  }
+                                                : item
+                                            )
+                                          })
+                                        }
+                                      />
+                                    </label>
+                                  ))}
+                                </div>
+                              </>
+                            ) : (
+                              <p className="form__empty">No quick check</p>
+                            )}
                           </div>
                         <div
                           className={classNames(

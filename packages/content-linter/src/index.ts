@@ -278,6 +278,53 @@ export const lintChains = (chains: QuestionChain[], nodes: Node[]): LintResult =
           });
         }
       }
+
+      if (step.check) {
+        const question = step.check.question?.trim() ?? "";
+        if (!question) {
+          errors.push({
+            level: "error",
+            code: "CHAIN_STEP_CHECK_QUESTION_REQUIRED",
+            chainId: chain.id,
+            path: `steps[${index}].check.question`,
+            message: `[ERROR] chain=${chain.id} step[${index}] check question is required`
+          });
+        }
+
+        const options = Array.isArray(step.check.options) ? step.check.options : [];
+        if (options.length < 2) {
+          errors.push({
+            level: "error",
+            code: "CHAIN_STEP_CHECK_OPTIONS_MIN",
+            chainId: chain.id,
+            path: `steps[${index}].check.options`,
+            message: `[ERROR] chain=${chain.id} step[${index}] check needs at least 2 options`
+          });
+        }
+
+        options.forEach((option, optionIndex) => {
+          if (!option || !option.trim()) {
+            errors.push({
+              level: "error",
+              code: "CHAIN_STEP_CHECK_OPTION_EMPTY",
+              chainId: chain.id,
+              path: `steps[${index}].check.options[${optionIndex}]`,
+              message: `[ERROR] chain=${chain.id} step[${index}] check option[${optionIndex}] is empty`
+            });
+          }
+        });
+
+        const answerIndex = step.check.answerIndex ?? -1;
+        if (answerIndex < 0 || answerIndex >= options.length) {
+          errors.push({
+            level: "error",
+            code: "CHAIN_STEP_CHECK_ANSWER_INDEX",
+            chainId: chain.id,
+            path: `steps[${index}].check.answerIndex`,
+            message: `[ERROR] chain=${chain.id} step[${index}] check answerIndex out of range`
+          });
+        }
+      }
     });
   }
 

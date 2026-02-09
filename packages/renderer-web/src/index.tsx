@@ -415,6 +415,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
   onMentionNavigate,
   nodesById
 }) => {
+  const [checkSelections, setCheckSelections] = React.useState<Record<string, number | null>>({});
   const total = chain.steps.length;
   const currentIndex = total === 0 ? 0 : Math.min(Math.max(state.stepIndex, 0), total - 1);
   const step = getStep(chain, currentIndex);
@@ -425,6 +426,15 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
     () => getMissingMentions(step?.mentions, nodesById),
     [step?.mentions, nodesById]
   );
+  const goalText = chain.goal?.[state.age]?.trim();
+  const summaryText = step?.summary?.[state.age]?.trim();
+  const check = step?.check;
+  const selectedIndex = step ? checkSelections[step.id] ?? null : null;
+  const isCorrect = check && selectedIndex !== null ? selectedIndex === check.answerIndex : null;
+
+  React.useEffect(() => {
+    setCheckSelections({});
+  }, [chain.id]);
 
   if (!step) {
     return (
@@ -440,6 +450,7 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
         <div>
           <p className="question-chain__kicker">问题链</p>
           <h3>{chain.title}</h3>
+          {goalText ? <p className="question-chain__goal">{goalText}</p> : null}
           <div className="question-chain__progress" aria-hidden="true">
             <div
               className="question-chain__progress-bar"
@@ -476,6 +487,40 @@ export const QuestionChainPanel: React.FC<QuestionChainPanelProps> = ({
         </p>
         <h4>{step.question}</h4>
         <p>{renderMentions(step.answers[state.age], step.mentions, onMentionNavigate)}</p>
+        {summaryText ? <p className="question-chain__summary">{summaryText}</p> : null}
+        {check ? (
+          <div className="question-chain__check">
+            <p className="question-chain__check-title">Quick Check</p>
+            <p className="question-chain__check-question">{check.question}</p>
+            <div className="question-chain__check-options" role="radiogroup">
+              {check.options.map((option, index) => (
+                <label key={`${step.id}-check-${index}`} className="question-chain__check-option">
+                  <input
+                    type="radio"
+                    name={`qc-${step.id}`}
+                    checked={selectedIndex === index}
+                    onChange={() =>
+                      setCheckSelections((current) => ({ ...current, [step.id]: index }))
+                    }
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+            {selectedIndex !== null ? (
+              <div
+                className={`question-chain__check-result${
+                  isCorrect ? " is-correct" : " is-wrong"
+                }`}
+              >
+                <strong>{isCorrect ? "正确" : "不太对"}</strong>
+                {check.explanation?.[state.age] ? (
+                  <p>{check.explanation[state.age]}</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <footer className="question-chain__footer">
         <div className="question-chain__controls">
