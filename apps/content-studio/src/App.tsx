@@ -314,6 +314,31 @@ const createStep = (id: string): DraftStep => ({
   mentions: []
 });
 
+const DEFAULT_CHAIN_STEP_TEMPLATES = [
+  { key: "what", label: "What", hint: "<定义核心概念>" },
+  { key: "parts", label: "Parts", hint: "<拆解关键要素>" },
+  { key: "how", label: "How", hint: "<解释机制或方法>" },
+  { key: "in_life", label: "In life", hint: "<生活中的应用>" },
+  { key: "compare_practice", label: "Compare + Practice", hint: "<对比并给出练习>" }
+];
+
+const buildTemplateAnswer = (hint: string): string => {
+  return `（占位）请补充回答。\n提示：${hint}`;
+};
+
+const createTemplateStep = (index: number): DraftStep => {
+  const template = DEFAULT_CHAIN_STEP_TEMPLATES[index] ?? DEFAULT_CHAIN_STEP_TEMPLATES[0];
+  return {
+    id: `step_${index + 1}`,
+    question: `${template.label}: （占位问题）`,
+    answers: {
+      child: buildTemplateAnswer(template.hint),
+      adult: buildTemplateAnswer(template.hint)
+    },
+    mentions: []
+  };
+};
+
 const getNextStepId = (steps: DraftStep[]): string => {
   const existing = new Set(steps.map((step) => step.id));
   let index = steps.length + 1;
@@ -769,7 +794,7 @@ const App: React.FC = () => {
     const id = makeUniqueId(base, existing);
     const topicNodeId = selectedId ? selectedId : "";
     const next = createEmptyChain(id, topicNodeId);
-    next.steps = [createStep("step_1")];
+    next.steps = DEFAULT_CHAIN_STEP_TEMPLATES.map((_, index) => createTemplateStep(index));
     setChainDraft(next);
     setSelectedChainId("");
     setChainErrors([]);
