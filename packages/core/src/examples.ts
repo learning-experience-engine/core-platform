@@ -3,7 +3,7 @@ import rawNodes from "../../../content/examples/nodes.json";
 import rawChains from "../../../content/examples/chains.json";
 
 const nodes = rawNodes as Node[];
-const chains = rawChains as QuestionChain[];
+const chains = rawChains as unknown as QuestionChain[];
 
 export const loadExamples = (): Node[] => nodes;
 
