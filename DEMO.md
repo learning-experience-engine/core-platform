@@ -37,5 +37,6 @@ Open: http://localhost:5173
 - Weather deep-dive: http://localhost:5173/?stack=weather,air_pressure,wind
 - Skin deep-dive: http://localhost:5173/?stack=skin,epidermis,dermis
 - Skin chain: http://localhost:5173/?stack=skin&chain=skin_intro&step=0&age=adult
+- Sun tan chain: http://localhost:5173/?stack=skin&chain=sun_tan_uv&step=0&age=adult
 - Plant cell chain: http://localhost:5173/?stack=plant_cell&chain=plant_cell_intro&step=0&age=adult
 - Mixed: http://localhost:5173/?stack=plant_cell,protoplast&chain=plant_cell_intro&step=1&age=child

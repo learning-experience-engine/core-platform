@@ -10,7 +10,7 @@
 - 左侧列表上方提供 `New Node` / `New Chain` 按钮。
 - New Node 会创建一个空节点并选中进入编辑：`id` 自动生成（基于 title；若 title 为空则 `node_<timestamp>`），`title/body` 为空，`mentions/relations` 为空。
 - New Chain 会创建一个空链路并选中进入编辑：`id` 自动生成（基于 title；若 title 为空则 `chain_<timestamp>`），`topicNodeId` 默认当前选中节点（若无则提示必填），并自动带有 `step_1..step_5`。
-- New Chain 默认生成 5-step 教学模板（What/Parts/How/In life/Compare+Practice），answers 末尾附带 `提示：...` 占位行（后续可能升级为结构化字段）。
+- New Chain 默认生成 5-step 教学模板（是什么/结构/怎么工作/生活中的表现/对比实践），answers 末尾附带 `提示：...` 占位行（后续可能升级为结构化字段）。
 
 ## Mention Suggestions
 - Node 编辑区包含 `Mention Suggestions`，根据 body 内容扫描已存在节点标题，给出未被 mentions 覆盖的建议，点击即可一键添加。

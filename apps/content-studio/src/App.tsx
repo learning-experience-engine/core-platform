@@ -315,11 +315,11 @@ const createStep = (id: string): DraftStep => ({
 });
 
 const DEFAULT_CHAIN_STEP_TEMPLATES = [
-  { key: "what", label: "What", hint: "<定义核心概念>" },
-  { key: "parts", label: "Parts", hint: "<拆解关键要素>" },
-  { key: "how", label: "How", hint: "<解释机制或方法>" },
-  { key: "in_life", label: "In life", hint: "<生活中的应用>" },
-  { key: "compare_practice", label: "Compare + Practice", hint: "<对比并给出练习>" }
+  { key: "what", question: "是什么（What）", hint: "<补充核心定义>" },
+  { key: "parts", question: "结构/组成（Parts）", hint: "<拆解关键要素>" },
+  { key: "how", question: "怎么工作（How）", hint: "<解释机制或方法>" },
+  { key: "in_life", question: "生活中的表现（In life）", hint: "<举例应用场景>" },
+  { key: "compare_practice", question: "对比/实践（Compare/Practice）", hint: "<对比并给出练习>" }
 ];
 
 const buildTemplateAnswer = (hint: string): string => {
@@ -330,7 +330,7 @@ const createTemplateStep = (index: number): DraftStep => {
   const template = DEFAULT_CHAIN_STEP_TEMPLATES[index] ?? DEFAULT_CHAIN_STEP_TEMPLATES[0];
   return {
     id: `step_${index + 1}`,
-    question: `${template.label}: （占位问题）`,
+    question: template.question,
     answers: {
       child: buildTemplateAnswer(template.hint),
       adult: buildTemplateAnswer(template.hint)
