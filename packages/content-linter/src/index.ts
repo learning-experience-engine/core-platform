@@ -61,6 +61,15 @@ const suggestSimilarIds = (target: string, nodeIds: string[], limit = 3): string
   return `suggest: ${matches.map((item) => item.id).join(", ")}`;
 };
 
+const isCjk = (value: string): boolean => /[\u4e00-\u9fff]/.test(value);
+
+const isAliasTooShort = (alias: string): boolean => {
+  const compact = alias.replace(/\s+/g, "");
+  if (!compact) return false;
+  if (isCjk(compact)) return compact.length < 2;
+  return compact.length < 3;
+};
+
 export const lintNodes = (nodes: Node[]): LintResult => {
   const errors: LintMessage[] = [];
   const warnings: LintMessage[] = [];
@@ -79,6 +88,42 @@ export const lintNodes = (nodes: Node[]): LintResult => {
   }
 
   for (const node of nodes) {
+    const titleKey = node.title.trim().toLowerCase();
+    const seenAliases = new Set<string>();
+    const aliases = node.aliases ?? [];
+
+    aliases.forEach((alias, index) => {
+      const trimmed = alias.trim();
+      if (!trimmed) {
+        errors.push({
+          level: "error",
+          message: `[ERROR] node=${node.id} alias[${index}] empty`
+        });
+        return;
+      }
+      const aliasKey = trimmed.toLowerCase();
+      if (aliasKey === titleKey) {
+        warnings.push({
+          level: "warn",
+          message: `[WARN]  node=${node.id} alias="${trimmed}" matches title`
+        });
+      }
+      if (seenAliases.has(aliasKey)) {
+        warnings.push({
+          level: "warn",
+          message: `[WARN]  node=${node.id} alias="${trimmed}" duplicate`
+        });
+      } else {
+        seenAliases.add(aliasKey);
+      }
+      if (isAliasTooShort(trimmed)) {
+        warnings.push({
+          level: "warn",
+          message: `[WARN]  node=${node.id} alias="${trimmed}" too short`
+        });
+      }
+    });
+
     if (node.relations.length === 0) {
       warnings.push({
         level: "warn",

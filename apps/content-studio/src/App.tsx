@@ -57,6 +57,7 @@ type RelationRow = {
 type DraftNode = {
   id: string;
   title: string;
+  aliasesText: string;
   body: LocalizedText;
   bodyText: string;
   mentions: MentionRow[];
@@ -139,9 +140,23 @@ const toRelations = (rows: RelationRow[]): Relation[] => {
     }));
 };
 
+const normalizeAliases = (input: string): string[] => {
+  const lines = input.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  const result: string[] = [];
+  lines.forEach((alias) => {
+    const key = alias.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(alias);
+  });
+  return result;
+};
+
 const emptyDraftNode = (): DraftNode => ({
   id: "",
   title: "",
+  aliasesText: "",
   body: "",
   bodyText: "",
   mentions: [],
@@ -152,6 +167,7 @@ const emptyDraftNode = (): DraftNode => ({
 const buildDraftNode = (node: Node): DraftNode => ({
   id: node.id,
   title: node.title,
+  aliasesText: (node.aliases ?? []).join("\n"),
   body: node.body,
   bodyText: getBodyText(node.body),
   mentions: toMentionRows(node.mentions),
@@ -159,13 +175,17 @@ const buildDraftNode = (node: Node): DraftNode => ({
   isNew: false
 });
 
-const buildNode = (draft: DraftNode): Node => ({
-  id: draft.id.trim(),
-  title: draft.title.trim(),
-  body: updateBody(draft.body, draft.bodyText),
-  mentions: toMentionRecord(draft.mentions),
-  relations: toRelations(draft.relations)
-});
+const buildNode = (draft: DraftNode): Node => {
+  const aliases = normalizeAliases(draft.aliasesText);
+  return {
+    id: draft.id.trim(),
+    title: draft.title.trim(),
+    ...(aliases.length > 0 ? { aliases } : {}),
+    body: updateBody(draft.body, draft.bodyText),
+    mentions: toMentionRecord(draft.mentions),
+    relations: toRelations(draft.relations)
+  };
+};
 
 const buildDraftStep = (step: ChainStep): DraftStep => ({
   id: step.id,
@@ -242,6 +262,21 @@ type MentionSuggestion = {
   index: number;
 };
 
+const getNodeTerms = (node: Node): string[] => {
+  const terms = [node.title, ...(node.aliases ?? [])];
+  const seen = new Set<string>();
+  const result: string[] = [];
+  terms.forEach((term) => {
+    const trimmed = term.trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(trimmed);
+  });
+  return result;
+};
+
 const buildMentionSuggestions = (
   text: string,
   nodes: Node[],
@@ -256,14 +291,15 @@ const buildMentionSuggestions = (
 
   nodes.forEach((node) => {
     if (excludeNodeId && node.id === excludeNodeId) return;
-    const term = node.title.trim();
-    if (!term) return;
-    if (!meetsTermLength(term)) return;
-    const termKey = term.toLowerCase();
-    if (existingTerms.has(termKey)) return;
-    const index = normalizedText.indexOf(termKey);
-    if (index === -1) return;
-    suggestions.push({ term, targetId: node.id, targetTitle: node.title, index });
+    const terms = getNodeTerms(node);
+    terms.forEach((term) => {
+      if (!meetsTermLength(term)) return;
+      const termKey = term.toLowerCase();
+      if (existingTerms.has(termKey)) return;
+      const index = normalizedText.indexOf(termKey);
+      if (index === -1) return;
+      suggestions.push({ term, targetId: node.id, targetTitle: node.title, index });
+    });
   });
 
   suggestions.sort((a, b) => {
@@ -707,6 +743,20 @@ const App: React.FC = () => {
                     }
                     setDraft({ ...draft, title: nextTitle, id: nextId });
                   }}
+                />
+              </label>
+              <label>
+                <span>Aliases</span>
+                <textarea
+                  rows={3}
+                  placeholder="One alias per line"
+                  value={draft.aliasesText}
+                  onChange={(event) =>
+                    setDraft({
+                      ...draft,
+                      aliasesText: event.target.value
+                    })
+                  }
                 />
               </label>
               <label>

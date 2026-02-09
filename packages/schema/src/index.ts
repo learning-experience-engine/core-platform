@@ -16,6 +16,7 @@ export type Relation = {
 export type Node = {
   id: string;
   title: string;
+  aliases?: string[];
   body: LocalizedText;
   mentions: Record<string, string>;
   relations: Relation[];

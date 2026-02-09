@@ -95,4 +95,68 @@ describe("lintNodes", () => {
       ])
     );
   });
+
+  it("reports empty aliases as errors", () => {
+    const nodes: Node[] = [
+      {
+        id: "alias_empty",
+        title: "Alias Empty",
+        aliases: ["   "],
+        body: "",
+        mentions: {},
+        relations: [
+          {
+            type: "part_of",
+            facet: "what",
+            to: "alias_empty"
+          }
+        ]
+      }
+    ];
+
+    const result = lintNodes(nodes);
+
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("alias[0] empty")
+        })
+      ])
+    );
+  });
+
+  it("warns on duplicate, title-matching, and short aliases", () => {
+    const nodes: Node[] = [
+      {
+        id: "alias_warn",
+        title: "Wind",
+        aliases: ["Wind", "gust", "Gust", "go"],
+        body: "",
+        mentions: {},
+        relations: [
+          {
+            type: "part_of",
+            facet: "what",
+            to: "alias_warn"
+          }
+        ]
+      }
+    ];
+
+    const result = lintNodes(nodes);
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("alias=\"Wind\" matches title")
+        }),
+        expect.objectContaining({
+          message: expect.stringContaining("alias=\"Gust\" duplicate")
+        }),
+        expect.objectContaining({
+          message: expect.stringContaining("alias=\"go\" too short")
+        })
+      ])
+    );
+  });
 });
