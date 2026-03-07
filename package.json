@@ -13,10 +13,14 @@
     "lint": "pnpm -r lint",
     "lint:content": "pnpm --filter @lxp/content-linter build && node packages/content-linter/dist/cli.js",
     "typecheck": "tsc -b",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "node ./scripts/run-playwright.mjs",
+    "test:e2e:content-studio": "node ./scripts/run-playwright.mjs",
+    "test:e2e:headed": "node ./scripts/run-playwright.mjs --headed"
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.50.1",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
