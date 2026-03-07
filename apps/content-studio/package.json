@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src --ext .ts,.tsx",
+    "smoke": "pnpm --dir ../.. test:e2e:content-studio",
+    "smoke:headed": "pnpm --dir ../.. test:e2e:headed"
   },
   "dependencies": {
     "@lxp/schema": "workspace:*",

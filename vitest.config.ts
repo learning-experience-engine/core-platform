@@ -6,7 +6,8 @@ export default defineConfig({
     include: [
       "packages/core/src/**/*.test.ts",
       "packages/graph/src/**/*.test.ts",
-      "packages/content-linter/src/**/*.test.ts"
+      "packages/content-linter/src/**/*.test.ts",
+      "apps/content-studio/src/**/*.test.ts"
     ]
   }
 });
