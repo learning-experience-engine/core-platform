@@ -151,6 +151,33 @@ test.describe("navigation", () => {
     await expect(page.getByLabel("Topic Node")).toBeFocused();
   });
 
+  test("clicking a node lint issue switches mode and focuses the node field", async ({ page }) => {
+    await mockLintIssues(page, [
+      {
+        level: "error",
+        code: "NODE_TITLE_REQUIRED",
+        message: "[ERROR] Title 不能为空",
+        nodeId: "weather",
+        path: "title"
+      }
+    ]);
+
+    await openStudio(page);
+    await page.getByRole("tab", { name: "Chains" }).click();
+    await clickAndWait(page.getByRole("button", { name: "Run content lint" }), waitForLintRun(page));
+
+    const lintIssue = page.getByRole("button", {
+      name: /node:weather.*title.*Title 不能为空/
+    });
+    await expect(lintIssue).toBeVisible();
+    await lintIssue.click();
+
+    await expect(page.getByRole("tab", { name: "Nodes", selected: true })).toBeVisible();
+    await expect(page.getByLabel("ID")).toHaveValue("weather");
+    await expect(page.getByLabel("Title")).toHaveValue("天气");
+    await expect(page.getByLabel("Title")).toBeFocused();
+  });
+
   test("clicking a step mention lint issue focuses the mention section fallback", async ({ page }) => {
     await mockLintIssues(page, [
       {
