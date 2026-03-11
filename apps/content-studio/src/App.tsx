@@ -29,6 +29,18 @@ import { validateNodeDraft } from "./nodes/validation";
 import type { DraftChain, DraftNode, Mode } from "./types";
 import { makeBaseId, makeUniqueId } from "./utils/ids";
 
+const cloneValue = <T,>(value: T): T => {
+  return JSON.parse(JSON.stringify(value)) as T;
+};
+
+const serializeNodeDraft = (value: DraftNode): string => {
+  return JSON.stringify(buildNode(value));
+};
+
+const serializeChainDraft = (value: DraftChain): string => {
+  return JSON.stringify(buildChain(value));
+};
+
 const App: React.FC = () => {
   const [mode, setMode] = React.useState<Mode>("nodes");
   const [nodes, setNodes] = React.useState<Node[]>([]);
@@ -37,6 +49,10 @@ const App: React.FC = () => {
   const [selectedChainId, setSelectedChainId] = React.useState<string>("");
   const [draft, setDraft] = React.useState<DraftNode>(() => emptyDraftNode());
   const [chainDraft, setChainDraft] = React.useState<DraftChain>(() => createEmptyChain("", ""));
+  const [nodeBaselineDraft, setNodeBaselineDraft] = React.useState<DraftNode>(() => emptyDraftNode());
+  const [chainBaselineDraft, setChainBaselineDraft] = React.useState<DraftChain>(() =>
+    createEmptyChain("", "")
+  );
   const [search, setSearch] = React.useState("");
   const [chainSearch, setChainSearch] = React.useState("");
   const [status, setStatus] = React.useState<string>("");
@@ -51,40 +67,38 @@ const App: React.FC = () => {
   const [nodeErrors, setNodeErrors] = React.useState<string[]>([]);
   const [chainErrors, setChainErrors] = React.useState<string[]>([]);
 
+  const loadNodeDraft = React.useCallback((nextDraft: DraftNode, nextSelectedId: string) => {
+    setDraft(cloneValue(nextDraft));
+    setNodeBaselineDraft(cloneValue(nextDraft));
+    setSelectedId(nextSelectedId);
+    setNodeErrors([]);
+  }, []);
+
+  const loadChainDraft = React.useCallback((nextDraft: DraftChain, nextSelectedChainId: string) => {
+    setChainDraft(cloneValue(nextDraft));
+    setChainBaselineDraft(cloneValue(nextDraft));
+    setSelectedChainId(nextSelectedChainId);
+    setChainErrors([]);
+  }, []);
+
   React.useEffect(() => {
     Promise.all([fetchNodes(), fetchChains()])
       .then(([nodeData, chainData]) => {
         setNodes(nodeData);
         setChains(chainData);
+
         if (nodeData.length > 0) {
-          setSelectedId(nodeData[0].id);
-          setDraft(buildDraftNode(nodeData[0]));
+          loadNodeDraft(buildDraftNode(nodeData[0]), nodeData[0].id);
         }
+
         if (chainData.length > 0) {
-          setSelectedChainId(chainData[0].id);
-          setChainDraft(buildDraftChain(chainData[0]));
+          loadChainDraft(buildDraftChain(chainData[0]), chainData[0].id);
         }
       })
       .catch((error) => {
         setStatus(`加载失败: ${String(error)}`);
       });
-  }, []);
-
-  React.useEffect(() => {
-    const node = nodes.find((item) => item.id === selectedId);
-    if (node) {
-      setDraft(buildDraftNode(node));
-      setNodeErrors([]);
-    }
-  }, [nodes, selectedId]);
-
-  React.useEffect(() => {
-    const chain = chains.find((item) => item.id === selectedChainId);
-    if (chain) {
-      setChainDraft(buildDraftChain(chain));
-      setChainErrors([]);
-    }
-  }, [chains, selectedChainId]);
+  }, [loadChainDraft, loadNodeDraft]);
 
   const filtered = React.useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -159,6 +173,85 @@ const App: React.FC = () => {
     return buildLintTargetKey(scope, id, paths[0] ?? topPath);
   }, []);
 
+  const currentNodeSnapshot = React.useMemo(() => serializeNodeDraft(draft), [draft]);
+  const currentChainSnapshot = React.useMemo(() => serializeChainDraft(chainDraft), [chainDraft]);
+  const nodeBaselineSnapshot = React.useMemo(
+    () => serializeNodeDraft(nodeBaselineDraft),
+    [nodeBaselineDraft]
+  );
+  const chainBaselineSnapshot = React.useMemo(
+    () => serializeChainDraft(chainBaselineDraft),
+    [chainBaselineDraft]
+  );
+  const isNodeDirty = currentNodeSnapshot !== nodeBaselineSnapshot;
+  const isChainDirty = currentChainSnapshot !== chainBaselineSnapshot;
+  const hasUnsavedChanges = mode === "nodes" ? isNodeDirty : isChainDirty;
+
+  React.useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
+
+  const confirmLeaveCurrentDraft = React.useCallback(() => {
+    const isDirty = mode === "nodes" ? isNodeDirty : isChainDirty;
+    if (!isDirty) return true;
+
+    const shouldDiscard = window.confirm("当前有未保存改动，确定要放弃吗？");
+    if (!shouldDiscard) return false;
+
+    if (mode === "nodes") {
+      setDraft(cloneValue(nodeBaselineDraft));
+      setNodeErrors([]);
+    } else {
+      setChainDraft(cloneValue(chainBaselineDraft));
+      setChainErrors([]);
+    }
+
+    return true;
+  }, [chainBaselineDraft, isChainDirty, isNodeDirty, mode, nodeBaselineDraft]);
+
+  const handleSelectNode = React.useCallback(
+    (id: string) => {
+      if (mode === "nodes" && id === selectedId) return;
+      const node = nodes.find((item) => item.id === id);
+      if (!node) return;
+      if (!confirmLeaveCurrentDraft()) return;
+      setMode("nodes");
+      loadNodeDraft(buildDraftNode(node), node.id);
+    },
+    [confirmLeaveCurrentDraft, loadNodeDraft, mode, nodes, selectedId]
+  );
+
+  const handleSelectChain = React.useCallback(
+    (id: string) => {
+      if (mode === "chains" && id === selectedChainId) return;
+      const chain = chains.find((item) => item.id === id);
+      if (!chain) return;
+      if (!confirmLeaveCurrentDraft()) return;
+      setMode("chains");
+      loadChainDraft(buildDraftChain(chain), chain.id);
+    },
+    [chains, confirmLeaveCurrentDraft, loadChainDraft, mode, selectedChainId]
+  );
+
+  const handleModeChange = React.useCallback(
+    (nextMode: Mode) => {
+      if (nextMode === mode) return;
+      if (!confirmLeaveCurrentDraft()) return;
+      setMode(nextMode);
+    },
+    [confirmLeaveCurrentDraft, mode]
+  );
+
   const runLintAndUpdate = async (source: "manual" | "auto") => {
     try {
       setLintStatus(source === "auto" ? "自动 lint 中..." : "运行中...");
@@ -199,8 +292,9 @@ const App: React.FC = () => {
       const payload = buildNode(draft);
       await saveNode(payload);
       const updated = await fetchNodes();
+      const savedNode = updated.find((node) => node.id === payload.id) ?? payload;
       setNodes(updated);
-      setSelectedId(payload.id);
+      loadNodeDraft(buildDraftNode(savedNode), savedNode.id);
       setStatus(`已保存: ${payload.id}`);
       void runLintAndUpdate("auto");
     } catch (error) {
@@ -225,8 +319,9 @@ const App: React.FC = () => {
       }
       await saveChain(payload);
       const updated = await fetchChains();
+      const savedChain = updated.find((chain) => chain.id === payload.id) ?? payload;
       setChains(updated);
-      setSelectedChainId(payload.id);
+      loadChainDraft(buildDraftChain(savedChain), savedChain.id);
       setStatus(`已保存: ${payload.id}`);
       void runLintAndUpdate("auto");
     } catch (error) {
@@ -234,29 +329,27 @@ const App: React.FC = () => {
     }
   };
 
-  const handleNew = () => {
+  const handleNew = React.useCallback(() => {
+    if (!confirmLeaveCurrentDraft()) return;
     const existing = new Set(nodes.map((node) => node.id));
     const base = makeBaseId("", "node");
     const next = emptyDraftNode();
     next.id = makeUniqueId(base, existing);
-    setDraft(next);
-    setSelectedId("");
-    setNodeErrors([]);
+    loadNodeDraft(next, "");
     setStatus("新节点已创建");
-  };
+  }, [confirmLeaveCurrentDraft, loadNodeDraft, nodes]);
 
-  const handleNewChain = () => {
+  const handleNewChain = React.useCallback(() => {
+    if (!confirmLeaveCurrentDraft()) return;
     const existing = new Set(chains.map((chain) => chain.id));
     const base = makeBaseId("", "chain");
     const id = makeUniqueId(base, existing);
     const topicNodeId = selectedId ? selectedId : "";
     const next = createEmptyChain(id, topicNodeId);
     next.steps = DEFAULT_CHAIN_STEP_TEMPLATES.map((_, index) => createTemplateStep(index));
-    setChainDraft(next);
-    setSelectedChainId("");
-    setChainErrors([]);
+    loadChainDraft(next, "");
     setStatus("新链路已创建");
-  };
+  }, [chains, confirmLeaveCurrentDraft, loadChainDraft, selectedId]);
 
   const handleBuildLinter = async () => {
     try {
@@ -299,12 +392,26 @@ const App: React.FC = () => {
   );
 
   const handleLintIssueClick = (issue: LintIssue) => {
+    const isSameTarget = issue.nodeId
+      ? mode === "nodes" && selectedId === issue.nodeId
+      : issue.chainId
+        ? mode === "chains" && selectedChainId === issue.chainId
+        : true;
+
+    if (!isSameTarget && !confirmLeaveCurrentDraft()) {
+      return;
+    }
+
     if (issue.nodeId) {
+      const node = nodes.find((item) => item.id === issue.nodeId);
+      if (!node) return;
       setMode("nodes");
-      setSelectedId(issue.nodeId);
+      loadNodeDraft(buildDraftNode(node), node.id);
     } else if (issue.chainId) {
+      const chain = chains.find((item) => item.id === issue.chainId);
+      if (!chain) return;
       setMode("chains");
-      setSelectedChainId(issue.chainId);
+      loadChainDraft(buildDraftChain(chain), chain.id);
     }
 
     window.setTimeout(() => {
@@ -364,7 +471,7 @@ const App: React.FC = () => {
               role="tab"
               aria-selected={mode === "nodes"}
               className={`mode-toggle__button${mode === "nodes" ? " is-active" : ""}`}
-              onClick={() => setMode("nodes")}
+              onClick={() => handleModeChange("nodes")}
             >
               Nodes
             </button>
@@ -373,11 +480,16 @@ const App: React.FC = () => {
               role="tab"
               aria-selected={mode === "chains"}
               className={`mode-toggle__button${mode === "chains" ? " is-active" : ""}`}
-              onClick={() => setMode("chains")}
+              onClick={() => handleModeChange("chains")}
             >
               Chains
             </button>
           </div>
+          {hasUnsavedChanges && (
+            <span className="studio__dirty-indicator" aria-live="polite">
+              未保存改动
+            </span>
+          )}
           <button
             type="button"
             className="button"
@@ -399,8 +511,8 @@ const App: React.FC = () => {
           chainSearch={chainSearch}
           onSearchChange={setSearch}
           onChainSearchChange={setChainSearch}
-          onSelectNode={setSelectedId}
-          onSelectChain={setSelectedChainId}
+          onSelectNode={handleSelectNode}
+          onSelectChain={handleSelectChain}
           onNewNode={handleNew}
           onNewChain={handleNewChain}
         />

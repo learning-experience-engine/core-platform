@@ -1,5 +1,20 @@
-export { loadExamples, loadExampleChains, getNodeById } from "./examples";
-export { groupRelationsByFacet, type RelationView } from "./relations";
+export { loadExamples, loadExampleChains, loadExampleDomains, getNodeById } from "./examples.js";
+export {
+  listNodes,
+  listChains,
+  getNode,
+  getChain,
+  searchContent,
+  type SearchOptions,
+  type SearchResult,
+  type SearchResultKind
+} from "./contentSearch.js";
+export {
+  matchScenarios,
+  type ScenarioMatch,
+  type ScenarioMatchOptions
+} from "./scenarioMatcher.js";
+export { groupRelationsByFacet, type RelationView } from "./relations.js";
 export {
   DEFAULT_ROOT_ID,
   reduceCardStack,
@@ -13,7 +28,7 @@ export {
   type NodeId,
   type CardStackState,
   type CardStackAction
-} from "./cardStack";
+} from "./cardStack.js";
 export {
   createQuestionChainState,
   reduceQuestionChain,
@@ -26,5 +41,15 @@ export {
   type QuestionChainState,
   type QuestionChainAction,
   type QuestionChainContext
-} from "./questionChain";
-export type { Node, Relation, RelationType, Facet, AgeBand, QuestionChain, ChainStep } from "@lxp/schema";
+} from "./questionChain.js";
+export type {
+  Node,
+  Relation,
+  RelationType,
+  Facet,
+  AgeBand,
+  QuestionChain,
+  ChainStep,
+  Domain,
+  Difficulty
+} from "@lxp/schema";

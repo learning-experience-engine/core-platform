@@ -65,6 +65,19 @@ select {
 .studio__actions {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.studio__dirty-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(197, 69, 44, 0.24);
+  background: #fff0eb;
+  color: #8a2b1d;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .mode-toggle {

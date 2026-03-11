@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useReducer, useRef, type ReactElement } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState, type ReactElement } from "react";
 import {
   getNodeById,
-  loadExamples,
-  loadExampleChains,
   reduceCardStack,
   setStack,
   push,
@@ -10,17 +8,21 @@ import {
   getPrev,
   getBreadcrumb,
   DEFAULT_ROOT_ID,
-  createQuestionChainState,
   reduceQuestionChain,
   type Node,
   type CardStackState,
   type QuestionChainState,
-  type QuestionChainAction
+  type QuestionChainAction,
+  type SearchResult,
+  type QuestionChain,
+  type ScenarioMatch,
+  type Domain
 } from "@lxp/core";
 import { GraphMini, NodeCard, QuestionChainPanel } from "@lxp/renderer-web";
 import "./styles.css";
 import { formatSearch, parseChainFromLocation, parseStackFromLocation } from "./urlStack";
-import type { Facet, QuestionChain } from "@lxp/schema";
+import type { Facet } from "@lxp/schema";
+import { fetchChains, fetchDomains, fetchNodes, fetchScenarioMatches, fetchSearchResults } from "./contentApi";
 
 const getTitle = (node: Node | undefined): string => node?.title ?? "Unknown";
 
@@ -47,6 +49,15 @@ type DemoPreset = {
   chainId?: string;
   stepIndex?: number;
   age?: "child" | "adult";
+};
+
+const getSearchResultMeta = (result: SearchResult): string => {
+  if (result.kind === "node") return `Node · ${result.id}`;
+  return `Chain · ${result.id}`;
+};
+
+const getScenarioMeta = (match: ScenarioMatch): string => {
+  return `Topic · ${match.topicNodeId}${match.chainId ? ` · Chain ${match.chainId}` : ""}`;
 };
 
 const NeighborhoodPanel = ({ centerId, nodesById, onNavigate }: NeighborhoodPanelProps) => {
@@ -99,8 +110,16 @@ const NeighborhoodPanel = ({ centerId, nodesById, onNavigate }: NeighborhoodPane
 };
 
 export const App = (): ReactElement => {
-  const nodes = useMemo(() => loadExamples(), []);
-  const chains = useMemo(() => loadExampleChains(), []);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [chains, setChains] = useState<QuestionChain[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searchStatus, setSearchStatus] = useState("");
+  const [scenarioQuery, setScenarioQuery] = useState("");
+  const [scenarioMatches, setScenarioMatches] = useState<ScenarioMatch[]>([]);
+  const [scenarioStatus, setScenarioStatus] = useState("");
   const nodesById = useMemo(
     () => Object.fromEntries(nodes.map((node) => [node.id, node])),
     [nodes]
@@ -128,23 +147,13 @@ export const App = (): ReactElement => {
       return reduceQuestionChain(current, action, { stepCount, defaultAge: "child" });
     },
     { chainId: "", stepIndex: 0, age: "child" } satisfies QuestionChainState,
-    () => {
-      const parsed = parseChainFromLocation(
-        window.location.search,
-        new Set(chains.map((chain) => chain.id))
-      );
-      const initialChain = chainsById[parsed.chainId];
-      return createQuestionChainState(
-        {
-          stepCount: initialChain?.steps.length ?? 0,
-          defaultAge: "child",
-          defaultChainId: ""
-        },
-        parsed
-      );
-    }
+    () => ({ chainId: "", stepIndex: 0, age: "child" } satisfies QuestionChainState)
   );
   const lastSearchRef = useRef<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchKind, setSearchKind] = useState<"all" | "node" | "chain">("all");
+  const [searchDomain, setSearchDomain] = useState<string>("all");
+  const selectedDomain = domains.find((domain) => domain.id === searchDomain);
 
   const currentId = getTop(state) ?? DEFAULT_ROOT_ID;
   const prevId = getPrev(state) ?? currentId;
@@ -152,6 +161,8 @@ export const App = (): ReactElement => {
   const previous = getNodeById(prevId, nodes);
   const breadcrumb = getBreadcrumb(state);
   const activeChain = chainState.chainId ? chainsById[chainState.chainId] : undefined;
+  const hasSearchQuery = searchQuery.trim().length > 0;
+  const hasDomains = domains.length > 0;
   const demoPresets: DemoPreset[] = [
     {
       id: "deep-dive",
@@ -204,7 +215,116 @@ export const App = (): ReactElement => {
     }
   };
 
+  const handleSearchResultClick = (result: SearchResult) => {
+    if (result.kind === "node") {
+      dispatch(setStack([result.id]));
+      chainDispatch({ type: "EXIT" });
+      return;
+    }
+
+    dispatch(setStack([result.topicNodeId ?? DEFAULT_ROOT_ID]));
+    chainDispatch({ type: "SET_CHAIN", chainId: result.id });
+    chainDispatch({ type: "SET_STEP", index: 0 });
+  };
+
+  const handleScenarioMatchClick = (match: ScenarioMatch) => {
+    dispatch(setStack([match.topicNodeId]));
+    if (!match.chainId) {
+      chainDispatch({ type: "EXIT" });
+      return;
+    }
+    chainDispatch({ type: "SET_CHAIN", chainId: match.chainId });
+    chainDispatch({ type: "SET_STEP", index: 0 });
+  };
+
+  const handleDomainTopicClick = (topicId: string) => {
+    dispatch(setStack([topicId]));
+    chainDispatch({ type: "EXIT" });
+  };
+
   useEffect(() => {
+    Promise.all([fetchNodes(), fetchChains(), fetchDomains()])
+      .then(([nextNodes, nextChains, nextDomains]) => {
+        setNodes(nextNodes);
+        setChains(nextChains);
+        setDomains(nextDomains);
+        setLoading(false);
+
+        const parsedChain = parseChainFromLocation(
+          window.location.search,
+          new Set(nextChains.map((chain) => chain.id))
+        );
+        if (parsedChain.chainId) {
+          chainDispatch({ type: "SET_CHAIN", chainId: parsedChain.chainId });
+          chainDispatch({ type: "SET_STEP", index: parsedChain.stepIndex });
+          chainDispatch({ type: "SET_AGE", age: parsedChain.age });
+        }
+      })
+      .catch((error) => {
+        setLoadError(String(error));
+        setLoading(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!hasSearchQuery) {
+      setSearchResults([]);
+      setSearchStatus("");
+      return;
+    }
+
+    let cancelled = false;
+    setSearchStatus("Searching...");
+    void fetchSearchResults(searchQuery, {
+      limit: 10,
+      kinds: searchKind === "all" ? undefined : [searchKind],
+      domainId: searchDomain === "all" ? undefined : searchDomain
+    })
+      .then((results) => {
+        if (cancelled) return;
+        setSearchResults(results);
+        setSearchStatus("");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setSearchResults([]);
+        setSearchStatus(`Search failed: ${String(error)}`);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSearchQuery, searchDomain, searchKind, searchQuery]);
+
+  useEffect(() => {
+    if (!scenarioQuery.trim()) {
+      setScenarioMatches([]);
+      setScenarioStatus("");
+      return;
+    }
+
+    let cancelled = false;
+    setScenarioStatus("Matching...");
+    void fetchScenarioMatches(scenarioQuery, 5, searchDomain === "all" ? undefined : searchDomain)
+      .then((results) => {
+        if (cancelled) return;
+        setScenarioMatches(results);
+        setScenarioStatus("");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setScenarioMatches([]);
+        setScenarioStatus(`Scenario match failed: ${String(error)}`);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [scenarioQuery, searchDomain]);
+
+  useEffect(() => {
+    if (loading) return;
+
     const handlePopstate = () => {
       const parsed = parseStackFromLocation(window.location.search);
       dispatch(setStack(parsed));
@@ -224,9 +344,11 @@ export const App = (): ReactElement => {
 
     window.addEventListener("popstate", handlePopstate);
     return () => window.removeEventListener("popstate", handlePopstate);
-  }, [chains]);
+  }, [chains, loading]);
 
   useEffect(() => {
+    if (loading) return;
+
     const nextSearch = formatSearch(
       state.stack,
       chainState.chainId ? chainState : undefined
@@ -238,12 +360,176 @@ export const App = (): ReactElement => {
     const url = `${window.location.pathname}${nextSearch}${window.location.hash}`;
     window.history.replaceState({ stack: state.stack, chain: chainState }, "", url);
     lastSearchRef.current = nextSearch;
-  }, [state.stack, chainState]);
+  }, [chainState, loading, state.stack]);
+
+  if (loading) {
+    return <div className="empty">Loading content...</div>;
+  }
+
+  if (loadError) {
+    return <div className="empty">Failed to load content: {loadError}</div>;
+  }
 
   return (
     <div className="app">
       <header className="app__header">
         <h1>Learning Experience Engine</h1>
+        <section className="domain-panel" aria-label="Domain overview">
+          <div className="domain-panel__header">
+            <span className="domain-panel__label">Domain overview</span>
+            <strong>{hasDomains ? "Explore available domains" : "Weather Domain"}</strong>
+          </div>
+          <p className="domain-panel__desc">
+            {hasDomains
+              ? "Jump into a domain overview or pick a key topic node to explore."
+              : "Explore the weather domain and jump into key topic nodes."}
+          </p>
+          <div className="domain-panel__grid">
+            {(hasDomains ? domains : []).map((domain) => (
+              <article key={domain.id} className="domain-card" style={{ borderColor: domain.color ?? undefined }}>
+                <div className="domain-card__header">
+                  <span className="domain-card__icon" aria-hidden="true">
+                    {domain.icon ?? "📚"}
+                  </span>
+                  <div>
+                    <div className="domain-card__title">{domain.title}</div>
+                    <div className="domain-card__meta">Overview: {getTitle(nodesById[domain.overviewNodeId])}</div>
+                  </div>
+                </div>
+                <p className="domain-card__desc">{domain.description}</p>
+                <div className="domain-card__topics">
+                  {domain.topicNodeIds.map((topicId: string) => (
+                    <button
+                      key={topicId}
+                      type="button"
+                      className="domain-panel__topic"
+                      onClick={() => handleDomainTopicClick(topicId)}
+                    >
+                      {getTitle(nodesById[topicId])}
+                    </button>
+                  ))}
+                </div>
+              </article>
+            ))}
+            {!hasDomains ? (
+              <div className="domain-panel__topics">
+                {["weather", "air_pressure", "wind", "cloud", "rain", "typhoon"].map((topicId: string) => (
+                  <button
+                    key={topicId}
+                    type="button"
+                    className="domain-panel__topic"
+                    onClick={() => handleDomainTopicClick(topicId)}
+                  >
+                    {getTitle(nodesById[topicId])}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </section>
+        <section className="search-panel" aria-label="Content search">
+          <div className="search-panel__toolbar">
+            <label className="search-panel__field">
+              <span className="search-panel__label">Scenario entry</span>
+              <input
+                type="search"
+                value={scenarioQuery}
+                onChange={(event) => setScenarioQuery(event.target.value)}
+                placeholder={
+                  searchDomain === "all"
+                    ? "Describe a real-life situation..."
+                    : `Describe a scenario in ${selectedDomain?.title ?? "selected domain"}...`
+                }
+              />
+            </label>
+            {scenarioQuery.trim() ? (
+              <div className="search-panel__results" role="list">
+                {scenarioMatches.length > 0 ? (
+                  scenarioMatches.map((match) => (
+                    <button
+                      key={`${match.topicNodeId}-${match.chainId ?? "no-chain"}`}
+                      type="button"
+                      className="search-result"
+                      onClick={() => handleScenarioMatchClick(match)}
+                    >
+                      <span className="search-result__meta">{getScenarioMeta(match)}</span>
+                      <strong className="search-result__title">Confidence {Math.round(match.confidence * 100)}%</strong>
+                      <span className="search-result__excerpt">{match.reasoning}</span>
+                    </button>
+                  ))
+                ) : (
+                  <div className="search-panel__empty">{scenarioStatus || "No matching scenarios yet."}</div>
+                )}
+              </div>
+            ) : null}
+          </div>
+          <div className="search-panel__toolbar">
+            <label className="search-panel__field">
+              <span className="search-panel__label">Search content</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={
+                  searchDomain === "all"
+                    ? "Search nodes, chains, aliases..."
+                    : `Search inside ${selectedDomain?.title ?? "selected domain"}...`
+                }
+              />
+            </label>
+            <div className="search-panel__filters" role="group" aria-label="Search kind filter">
+              {[
+                { label: "All", value: "all" },
+                { label: "Nodes", value: "node" },
+                { label: "Chains", value: "chain" }
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`search-panel__filter${searchKind === option.value ? " is-active" : ""}`}
+                  onClick={() => setSearchKind(option.value as "all" | "node" | "chain")}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div className="search-panel__filters" role="group" aria-label="Search domain filter">
+              {[
+                { label: "All domains", value: "all" },
+                ...domains.map((domain) => ({ label: domain.title, value: domain.id }))
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={`search-panel__filter${searchDomain === option.value ? " is-active" : ""}`}
+                  onClick={() => setSearchDomain(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {hasSearchQuery ? (
+            <div className="search-panel__results" role="list">
+              {searchResults.length > 0 ? (
+                searchResults.map((result) => (
+                  <button
+                    key={`${result.kind}-${result.id}`}
+                    type="button"
+                    className="search-result"
+                    onClick={() => handleSearchResultClick(result)}
+                  >
+                    <span className="search-result__meta">{getSearchResultMeta(result)}</span>
+                    <strong className="search-result__title">{result.title}</strong>
+                    <span className="search-result__excerpt">{result.excerpt}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="search-panel__empty">{searchStatus || "No matching nodes or chains."}</div>
+              )}
+            </div>
+          ) : null}
+        </section>
         <section className="demo-presets" aria-label="Demo presets">
           <div className="demo-presets__label">Demo presets</div>
           <div className="demo-presets__list">
