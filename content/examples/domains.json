@@ -1,0 +1,50 @@
+[
+  {
+    "id": "weather_domain",
+    "title": "天气与气象",
+    "description": "从天气现象出发，理解气压、云、降雨和台风等变化机制。",
+    "overviewNodeId": "weather",
+    "topicNodeIds": [
+      "weather",
+      "air_pressure",
+      "wind",
+      "cloud",
+      "rain",
+      "typhoon"
+    ],
+    "icon": "⛅️",
+    "color": "#2c6e49"
+  },
+  {
+    "id": "skin_domain",
+    "title": "皮肤与护理",
+    "description": "从皮肤结构和日常护理出发，理解痘痘、紫外线与屏障维护。",
+    "overviewNodeId": "skin",
+    "topicNodeIds": [
+      "skin",
+      "epidermis",
+      "dermis",
+      "sebaceous_gland",
+      "sweat_gland",
+      "skin_microbiome"
+    ],
+    "icon": "🧴",
+    "color": "#9c6b4e"
+  },
+  {
+    "id": "plant_cell_domain",
+    "title": "植物细胞",
+    "description": "围绕植物细胞的结构与实验方法，理解细胞壁、膜系统与对比视角。",
+    "overviewNodeId": "plant_cell",
+    "topicNodeIds": [
+      "plant_cell",
+      "protoplast",
+      "cell_wall",
+      "membrane",
+      "chloroplast",
+      "bacteria"
+    ],
+    "icon": "🌿",
+    "color": "#4f8d5c"
+  }
+]

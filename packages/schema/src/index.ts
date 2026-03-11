@@ -4,6 +4,8 @@ export type Facet = "what" | "how" | "in_life" | "compare" | "practice";
 
 export type AgeBand = "child" | "adult";
 
+export type Difficulty = "beginner" | "intermediate" | "advanced";
+
 export type LocalizedText = string | Record<string, string>;
 
 export type Relation = {
@@ -20,6 +22,19 @@ export type Node = {
   body: LocalizedText;
   mentions: Record<string, string>;
   relations: Relation[];
+  domain?: string;
+  difficulty?: Difficulty;
+  tags?: string[];
+};
+
+export type Domain = {
+  id: string;
+  title: string;
+  description: string;
+  overviewNodeId: string;
+  topicNodeIds: string[];
+  icon?: string;
+  color?: string;
 };
 
 export type ChainStep = {
@@ -51,4 +66,9 @@ export type QuestionChain = {
     child?: string;
     adult?: string;
   };
+  scenario?: string;
+  keywords?: string[];
+  difficulty?: Difficulty;
+  prerequisites?: string[];
+  domainId?: string;
 };
